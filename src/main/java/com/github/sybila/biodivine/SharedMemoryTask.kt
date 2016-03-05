@@ -6,7 +6,6 @@ import com.github.sybila.ctl.untilNormalForm
 import com.github.sybila.ode.generator.*
 import com.github.sybila.ode.model.Parser
 import com.github.sybila.ode.model.computeApproximation
-import org.yaml.snakeyaml.Yaml
 import java.io.File
 import java.util.concurrent.FutureTask
 import java.util.logging.FileHandler
@@ -14,188 +13,200 @@ import java.util.logging.Level
 import java.util.logging.Logger
 import java.util.logging.SimpleFormatter
 
+class ODEModelConfig(
+    val file: File,
+    val fastApproximation: Boolean,
+    val cutToRange: Boolean
+) {
+    constructor(config: YamlMap) : this(
+            config.getFile("file"),
+            config.getBoolean("fastApproximation", false),
+            config.getBoolean("cutToRange", false)
+    )
+}
+
 /**
  * This is the main function which should execute a shared memory verification task.
  */
 fun main(args: Array<String>) {
-    val consoleLogLevel = args[0]
+    val consoleLogLevel = args[0].toLogLevel()
     val name = args[1]
     val taskRoot = File(args[2])
     taskRoot.mkdirs()
-    val config = Yaml().load(args[3]) as Map<*, *>
+    val config = args[3].toYamlMap()
 
     //Configure default logger to match main process
     val logger = Logger.getLogger("com.github.sybila")
-    logger.useParentHandlers = false    //disable default top level logger
+    logger.useParentHandlers = false
     logger.addHandler(ConsoleHandler().apply {
-        this.level = consoleLogLevel.toLogLevel()
+        this.level = consoleLogLevel
         this.formatter = CleanFormatter()
     })
     logger.addHandler(FileHandler("${taskRoot.absolutePath}/$name-log.log").apply {
         this.formatter = SimpleFormatter()  //NO XML!
     })
 
-    val modelConfig = config["model"] as Map<*, *>? ?: error("No model specified!")
 
-    if (modelConfig["type"] != "ODE") {
-        error("Unsupported model type: ${modelConfig["type"]}")
-    }
+    val taskConfig = TaskConfig(config)
 
-    val modelFile = File(modelConfig["file"] as String? ?: error("Missing model file"))
+    val ctlParser = CTLParser(config.getMap("ctlParser").toParserConfiguration())
 
+    val modelType = config.getMap("model").getString("type", "none")
 
-    val m = Parser().parse(modelFile)
+    val resultPrinting = config.getMap("checker").getStringList("results")
+    val checkerLogLevel = config.getMap("checker").getLogLevel("logLevel", Level.INFO)
 
-    logger.info("Model parsing finished. Running approximation...")
-    val start = System.currentTimeMillis()
-    val model = m.computeApproximation(
-            modelConfig["fastApproximation"] as Boolean? ?: false,
-            modelConfig["cutToRange"] as Boolean? ?: false
-    )
-    logger.info("Model approximation finished. Elapsed time: ${System.currentTimeMillis() - start}ms")
+    when (modelType) {
+        "ODE" -> {
+            val modelConfig = ODEModelConfig(config.getMap("model"))
 
-    val parserConfig = config["propertyParser"] as Map<*, *>?
+            val start = System.currentTimeMillis()
+            val model = Parser().parse(modelConfig.file).apply {
+                logger.info("Model parsing finished. Running approximation...")
+            }.computeApproximation(
+                    fast = modelConfig.fastApproximation,
+                    cutToRange = modelConfig.cutToRange
+            )
+            logger.info("Model approximation finished. Elapsed time: ${System.currentTimeMillis() - start}ms")
 
-    val ctlParser = CTLParser(parserConfig?.toParserConfiguration() ?: CTLParser.Configuration(
-            untilNormalForm, true, Logger.getLogger(CTLParser::class.java.canonicalName).apply { this.level = Level.INFO }
-    ))
+            val nodeEncoder = NodeEncoder(model)
 
-    val distConfig = config["distribution"] as Map<*, *>?
-    val distribution = if (distConfig == null) DistributionSettings() else DistributionSettings(distConfig)
-
-    if (distribution.communicator != "SharedMemoryCommunicator") {
-        error("Unsupported communicator: ${distribution.communicator}")
-    }
-    if (distribution.jobQueue != "SingleThreadJobQueue") {
-        error("Unsupported job queue: ${distribution.jobQueue}")
-    }
-
-    val nodeEncoder = NodeEncoder(model)
-
-    val partitions = (0 until distribution.workers).map { id ->
-        when (distribution.partitioning) {
-            "uniform" -> UniformPartitionFunction<IDNode>()
-            "slice" -> SlicePartitioning(id, distribution.workers, nodeEncoder)
-            "block" -> ChequerPartitioning(id, distribution.workers, distConfig?.get("blockSize") as Int? ?: 100, nodeEncoder)
-            "hash" -> HashPartitioning(id, distribution.workers, nodeEncoder)
-            else -> error("Unknown partition function: ${distribution.partitioning}")
-        }
-    }
-    val fragments = partitions.map {
-        OdeFragment(model, it)
-    }
-
-    val checkerConfig = config["checker"] as Map<*,*>?
-
-    val checkerLogLevel = checkerConfig?.get("logLevel") as String? ?: "info"
-
-    val comm = createSharedMemoryCommunicators(distribution.workers)
-    val tokens = comm.toTokenMessengers()
-    val terminators = tokens.toFactories()
-    val queues = createSingleThreadJobQueues<IDNode, RectangleColors>(distribution.workers, partitions, comm, terminators)
-
-    val resultPrinting = (checkerConfig?.get("results") as List<*>? ?: listOf("size")).map { it.toString() }
-
-    queues.zip(fragments).map {
-        ModelChecker(it.second, it.first, Logger.getLogger(ModelChecker::class.java.canonicalName).apply {
-            level = checkerLogLevel.toLogLevel()
-        })
-    }.mapIndexed { id, checker ->
-        FutureTask {
-            val localLogger = Logger.getLogger("com.github.sybila.$id")
-            localLogger.useParentHandlers = false
-            localLogger.addHandler(ConsoleHandler().apply {
-                this.level = consoleLogLevel.toLogLevel()
-                this.formatter = CleanFormatter("$id: ")
-            })
-            localLogger.addHandler(FileHandler("${taskRoot.absolutePath}/$name-$id-log.log").apply {
-                this.formatter = SimpleFormatter()  //NO XML!
-            })
-
-            val properties = config["properties"] as List<*>
-
-            var pI = 0
-            for (p in properties) {
-                pI += 1
-                val property = p as Map<*,*>
-
-                val pFileName = property["file"] as String?
-                val verify = property["verify"] as String?
-                val formula = property["formula"] as String?
-
-                if (verify != null && formula != null) {
-                    error("Invalid property. Can't specify inlined formula and verify at the same time: $verify, $formula")
+            val partitions = (0 until taskConfig.workers).map { id ->
+                when (taskConfig.partitioning) {
+                    "uniform" -> UniformPartitionFunction<IDNode>()
+                    "slice" -> SlicePartitioning(id, taskConfig.workers, nodeEncoder)
+                    "block" -> ChequerPartitioning(id, taskConfig.workers, config.getInt("blockSize", 100), nodeEncoder)
+                    "hash" -> HashPartitioning(id, taskConfig.workers, nodeEncoder)
+                    else -> error("Unknown partition function: ${taskConfig.partitioning}")
                 }
+            }
 
-                if (verify == null && formula == null) {
-                    error("Invalid property. Missing a formula or verify clause.")
-                }
+            val comm = when(taskConfig.communicator) {
+                "SharedMemoryCommunicator" -> createSharedMemoryCommunicators(taskConfig.workers)
+                else -> error("Unknown communicator type: ${taskConfig.communicator}")
+            }
+            val tokens = comm.toTokenMessengers()
+            val terminators = tokens.toFactories()
 
-                val f = if (verify != null) {
-                    val formulas = ctlParser.parse(File(pFileName))
-                    formulas[verify]!!
-                } else if (pFileName != null) {
-                    val formulas = ctlParser.parse("""
-                    #include "$pFileName"
-                    myLongPropertyName = $formula
-                """)
-                    formulas["myLongPropertyName"]!!
-                } else {
-                    ctlParser.formula(formula!!)
-                }
+            val queues = when(taskConfig.jobQueue) {
+                "SingleThreadJobQueue" -> createSingleThreadJobQueues<IDNode, RectangleColors>(
+                        taskConfig.workers, partitions, comm, terminators
+                )
+                else -> error("Unknown queue type: ${taskConfig.jobQueue}")
+            }
 
-                localLogger.info("Start verification of $f")
+            val fragments = partitions.map { OdeFragment(model, it) }
 
-                val checkStart = System.currentTimeMillis()
-                val results = checker.verify(f)
+            queues.zip(fragments).mapIndexed { id, pair ->
+                FutureTask {
+                    val localLogger = Logger.getLogger("com.github.sybila.$id")
+                    localLogger.useParentHandlers = false
+                    localLogger.addHandler(ConsoleHandler().apply {
+                        this.level = consoleLogLevel
+                        this.formatter = CleanFormatter("$id: ")
+                    })
+                    localLogger.addHandler(FileHandler("${taskRoot.absolutePath}/$name.$id.log").apply {
+                        this.formatter = SimpleFormatter()  //NO XML!
+                    })
 
-                localLogger.info("Verification finished, elapsed time: ${System.currentTimeMillis() - checkStart}ms")
+                    val checker = ModelChecker(pair.second, pair.first, Logger.getLogger("com.github.sybila.$id.checker").apply {
+                        level = checkerLogLevel
+                    })
 
-                for (printType in resultPrinting) {
-                    when (printType) {
-                        "size" -> localLogger.info("Results size: ${results.entries.count()}")
-                        "stats" -> {
-                            localLogger.info("Model checker stats: ${checker.getStats()}")
-                        }
-                        "human" -> {
-                            File(taskRoot, "query-$pI.$id.human.txt").bufferedWriter().use {
-                                for (entry in results.entries) {
-                                    it.write("${entry.key} - ${entry.value}\n")
-                                }
-                            }
-                        }
-                        "json" -> {
-                            error("Json isn't supported just yet!")
-                            /* This does not work...
-                            File(taskRoot, "query-$pI.$id.json").bufferedWriter().use {
-                                val resultList = results.entries.toList()
-                                it.write(Gson().toJson(resultList))
-                            }*/
-                        }
-                        else -> error("Unsupported print type: $printType")
+                    val properties = config.getMapList("properties")
+                    for (i in properties.indices) {
+                        val result = verify(properties[i], ctlParser, checker, localLogger)
+                        processResults(id, taskRoot, "query-$i", result, checker.getStats(), resultPrinting, localLogger)
+                        checker.resetStats()
                     }
                 }
-
-                checker.resetStats()
+            }.map {
+                val t = guardedThread { it.run() }
+                Pair(t, it)
+            }.map {
+                it.first.join()
+                it.second.get()
             }
-        }
-        //rethink join strategy so that it actually quits
-    }.map { val t = guardedThread { it.run() }; Pair(it, t) }.map { it.first.get(); it.second.join() }
 
-    tokens.map { it.close() }
-    comm.map { it.close() }
+            tokens.map { it.close() }
+            comm.map { it.close() }
+        }
+        else -> error("Unknown model type: $modelType")
+    }
+}
+
+private fun <N: Node, C: Colors<C>> processResults(
+        id: Int,
+        taskRoot: File,
+        queryName: String,
+        results: Nodes<N, C>,
+        stats: Map<String, Any>,
+        printConfig: List<String>,
+        logger: Logger
+) {
+    for (printType in printConfig) {
+        when (printType) {
+            "size" -> logger.info("Results size: ${results.entries.count()}")
+            "stats" -> logger.info("Statistics: $stats")
+            "human" -> {
+                File(taskRoot, "$queryName.human.$id.txt").bufferedWriter().use {
+                    for (entry in results.entries) {
+                        it.write("${entry.key} - ${entry.value}\n")
+                    }
+                }
+            }
+            else -> error("Unknown print type: $printType")
+        }
+    }
+}
+
+private fun <N: Node, C: Colors<C>> verify(property: YamlMap, parser: CTLParser, checker: ModelChecker<N, C>, logger: Logger): Nodes<N, C> {
+
+    val pFileName = property.getString("file")
+    val verify = property.getString("verify")
+    val formula = property.getString("formula")
+
+    if (verify != null && formula != null) {
+        error("Invalid property. Can't specify inlined formula and verify at the same time: $verify, $formula")
+    }
+
+    if (verify == null && formula == null) {
+        error("Invalid property. Missing a formula or verify clause.")
+    }
+
+    val f = if (verify != null) {
+        val formulas = parser.parse(File(pFileName))
+        formulas[verify]!!
+    } else if (pFileName != null) {
+        val formulas = parser.parse("""
+                    #include "$pFileName"
+                    myLongPropertyNameThatNoOneWillUse = $formula
+                """)
+        formulas["myLongPropertyNameThatNoOneWillUse"]!!
+    } else {
+        parser.formula(formula!!)
+    }
+
+    logger.info("Start verification of $f")
+
+    val checkStart = System.currentTimeMillis()
+    val results = checker.verify(f)
+
+    logger.info("Verification finished, elapsed time: ${System.currentTimeMillis() - checkStart}ms")
+
+    return results
 
 }
 
-fun Map<*,*>.toParserConfiguration(): CTLParser.Configuration {
-    val normalForm = this["normalForm"] as String? ?: "until"
-    val logLevel = this["logLevel"] as String? ?: "info"
+fun YamlMap.toParserConfiguration(): CTLParser.Configuration {
+    val normalForm = this.getString("normalForm", "until")
+    val logLevel = this.getLogLevel("logLevel", Level.INFO)
     return CTLParser.Configuration(
             when (normalForm) {
                 "until" -> untilNormalForm
                 "none" -> null
                 else -> error("Unknown normal form: $normalForm")
-            }, this["optimize"] as Boolean? ?: true,
-            Logger.getLogger(CTLParser::class.java.canonicalName).apply { level = logLevel.toLogLevel() }
+            }, this.getBoolean("optimize", true),
+            Logger.getLogger(CTLParser::class.java.canonicalName).apply { level = logLevel }
     )
 }

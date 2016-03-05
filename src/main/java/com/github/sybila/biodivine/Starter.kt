@@ -1,11 +1,11 @@
 package com.github.sybila.biodivine
 
-import com.github.sybila.checker.lInfo
-import org.yaml.snakeyaml.Yaml
 import java.io.File
-import java.util.*
-import java.util.logging.*
+import java.util.logging.Level
+import java.util.logging.Logger
 
+
+val rootPackage = "com.github.sybila"
 
 /**
  * This is "The Main" main. The purpose of this is to load the config file, parse it,
@@ -26,59 +26,34 @@ fun main(args: Array<String>) {
         error("Expecting one argument that is a readable configuration file. ${args[0]} is not readable.")
     }
 
-    val config = Yaml().load(configFile.inputStream()) as Map<*,*>
+    // Setup Experiment
 
-    val name = (config["experiment"] as String?) ?: configFile.name.trimExtension()
-    val root = createUniqueExperimentName(name)
+    val yamlConfig = configFile.toYamlMap()
+    val root = setupExperiment(configFile.name.trimExtension(), yamlConfig)
 
-    setupExperiment(root, config)
+    //copy config file into experiment root as backup
+    configFile.copyTo(File(root, configFile.name), overwrite = true)
 
-    val tasks = (config["tasks"] as List<*>?) ?: ArrayList<Any>()
-    val consoleLogLevel = config["consoleLogLevel"] as String? ?: "info"
+    val logger = Logger.getLogger(rootPackage)
+    logger.info("Experiment is prepared. Executing tasks...")
 
-    //Configure default logger
-    val logger = Logger.getLogger("com.github.sybila")
-    logger.useParentHandlers = false    //disable default top level logger
-    logger.addHandler(ConsoleHandler().apply {
-        this.level = consoleLogLevel.toLogLevel()
-        this.formatter = CleanFormatter()
-    })
-    logger.addHandler(FileHandler("${root.name}/global-log.log").apply {
-        this.formatter = SimpleFormatter()  //NO XML!
-    })
+    // Execute tasks
 
-    logger.lInfo { "Experiment is prepared. Executing tasks..." }
+    val tasks = yamlConfig.getMapList("tasks")
 
-    if (tasks.size == 0) {
-        logger.warning("No tasks specified!")
-    }
-    if (tasks.size == 1) {
-        //if we have only one task, we don't need extra folders, just dump it into root
-        val task = tasks[0]
-        if (task !is MutableMap<*,*>) {
-            error("Invalid task in config file!")
-        } else {
-            executeTask(task, null, root, consoleLogLevel)
+    var success = 0
+    val globalLogLevel = yamlConfig.getLogLevel("consoleLogLevel", Level.INFO)
+    when (tasks.size) {
+        0 -> logger.warning("No tasks specified!")
+        1 -> if (executeTask(tasks.first(), null, root, globalLogLevel)) {
+            success += 1
         }
-    } else {
-        tasks.forEachIndexed { i, task ->
-            if (task !is Map<*,*>) {
-                error("Invalid task in config file!")
-            } else {
-                executeTask(task, "task-$i", root, consoleLogLevel)
+        else -> tasks.forEachIndexed { i, task ->
+            if (executeTask(task, "task-$i", root, globalLogLevel)) {
+                success += 1
             }
         }
     }
-}
 
-fun String.toLogLevel(): Level = when (this) {
-    "off" -> Level.OFF
-    "error" -> Level.SEVERE
-    "warning" -> Level.WARNING
-    "info" -> Level.INFO
-    "fine" -> Level.FINE
-    "finer" -> Level.FINER
-    "finest" -> Level.FINEST
-    "all" -> Level.ALL
-    else -> error("Unsupported log level: $this")
+    logger.info("$success/${tasks.size} tasks finished successfully. Exiting.")
 }
