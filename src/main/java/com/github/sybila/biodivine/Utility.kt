@@ -36,7 +36,12 @@ fun guardedProcess(args: Array<String>, logger: Logger, timeout: Int = -1): Int 
     val process = Runtime.getRuntime().exec(args)
     val timeoutThread = if (timeout > 0) {
         thread {
-            if (!process.waitFor(timeout.toLong(), TimeUnit.SECONDS)) {
+            Thread.sleep(timeout * 1000L)
+            try {
+                process.exitValue()
+                //Process terminated fine
+            } catch (e: IllegalThreadStateException) {
+                //Process is still alive!
                 process.destroy()
                 logger.info("Task was killed after exceeding timeout ${timeout}s")
             }
