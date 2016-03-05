@@ -16,6 +16,7 @@ buildscript {
 
 plugins {
     id 'com.madvay.tools.build.gitbuildinfo' version '0.1.5-alpha'
+    id 'com.github.johnrengelman.shadow' version '1.2.3'
 }
 
 apply plugin: 'idea'
@@ -46,15 +47,13 @@ dependencies {
     compile 'org.antlr:antlr4-runtime:4.5.2-1'
 }
 
-//create a single Jar with all dependencies
-task fullJar(type: Jar) {
+//Specify main class
+jar {
     manifest {
-        attributes 'Implementation-Title': 'BioDivine CTL',
-                'Implementation-Version': version
+        attributes  'Implementation-Title': 'Biodivine',
+                'Implementation-Version': version,
+                'Main-Class': 'com.github.sybila.biodivine.StarterKt'
     }
-    baseName = project.name + '-all'
-    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
-    with jar
 }
 
 sourceSets {
