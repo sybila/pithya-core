@@ -11,7 +11,7 @@ states space generators. It's currently under construction with a beta release c
 
 ### How to use
 
-BioDivine CTL is available as a jar file [here](https://github.com/sybila/biodivine-ctl/releases/download/0.1.0/ctl-biodivine-0.1.0-all.jar). It should work on Windows, however testing is performed only on Linux and OS X at the moment.
+BioDivine CTL is available as a jar file [here](https://github.com/sybila/biodivine-ctl/releases/download/0.1.1/ctl-biodivine-0.1.1-all.jar). It should work on Windows, however testing is performed only on Linux and OS X at the moment.
 
 The jar file takes one argument which is a configuration file. Example of configuration file can be found [here](https://github.com/sybila/biodivine-ctl/blob/master/config.yaml). (Any property that has a default value can be left out). 
 
