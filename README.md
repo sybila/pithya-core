@@ -9,6 +9,14 @@ BioDivine is a tool for distributed or parallel model checking of biological mod
 This repository should provide a frontend interface for running experiments using BioDivine engines and
 states space generators. It's currently under construction with a beta release coming soon.
 
+### How to use
+
+BioDivine CTL is available as a jar file [here](https://github.com/sybila/biodivine-ctl/releases/download/0.1.0/ctl-biodivine-0.1.0-all.jar). It should work on Windows, however testing is performed only on Linux and OS X at the moment.
+
+The jar file takes one argument which is a configuration file. Example of configuration file can be found [here](https://github.com/sybila/biodivine-ctl/blob/master/config.yaml). (Any property that has a default value can be left out). 
+
+BioDivine will create a separate folder to which it will write all results and information about the execution.
+
 ### Project status
 
 BioDivine is composed of several independent modules. Here you can find links to them and their status:
