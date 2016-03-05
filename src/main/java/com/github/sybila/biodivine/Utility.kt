@@ -36,14 +36,18 @@ fun guardedProcess(args: Array<String>, logger: Logger, timeout: Int = -1): Int 
     val process = Runtime.getRuntime().exec(args)
     val timeoutThread = if (timeout > 0) {
         thread {
-            Thread.sleep(timeout * 1000L)
             try {
-                process.exitValue()
-                //Process terminated fine
-            } catch (e: IllegalThreadStateException) {
-                //Process is still alive!
-                process.destroy()
-                logger.info("Task was killed after exceeding timeout ${timeout}s")
+                Thread.sleep(timeout * 1000L)
+                try {
+                    process.exitValue()
+                    //Process terminated fine
+                } catch (e: IllegalThreadStateException) {
+                    //Process is still alive!
+                    process.destroy()
+                    logger.info("Task was killed after exceeding timeout ${timeout}s")
+                }
+            } catch (e: InterruptedException) {
+                //it's ok
             }
         }
     } else null
@@ -66,6 +70,7 @@ fun guardedProcess(args: Array<String>, logger: Logger, timeout: Int = -1): Int 
         }
     }
     process.waitFor()
+    timeoutThread?.interrupt()
     timeoutThread?.join()
     stdReader.join()
     errReader.join()
