@@ -41,6 +41,9 @@ dependencies {
     compile 'com.intellij:annotations:5.1'
     compile 'com.github.sybila:ode-generator:0.8.0'
     compile 'org.yaml:snakeyaml:1.17'
+    compile 'com.google.code.gson:gson:2.6.2'
+    //ODE and CTL modules do not propagate this dependency, because it's part of the plugin
+    compile 'org.antlr:antlr4-runtime:4.5.2-1'
 }
 
 //create a single Jar with all dependencies
@@ -97,7 +100,7 @@ buildStamp {
     repoBaseUrl "https://github.com/sybila/biodivne-ctl/tree/"
     // BuildInfo.java will be added under this package, in a
     // generated build/ directory.
-    packageName "com.github.sybila"
+    packageName "com.github.sybila.biodivine"
 }
 
 //travis has some strict RAM restrictions, can't afford to exceed this
