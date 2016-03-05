@@ -13,17 +13,17 @@ states space generators. It's currently under construction with a beta release c
 
 BioDivine is composed of several independent modules. Here you can find links to them and their status:
 
-[CTL Model Checker](https://github.com/sybila/ctl-model-checker)
 [![Release](https://jitpack.io/v/sybila/ctl-model-checker.svg)](https://jitpack.io/#sybila/ctl-model-checker)
 [![Build Status](https://travis-ci.org/sybila/ctl-model-checker.svg?branch=master)](https://travis-ci.org/sybila/ctl-model-checker)
 [![codecov.io](https://codecov.io/github/sybila/ctl-model-checker/coverage.svg?branch=master)](https://codecov.io/github/sybila/ctl-model-checker?branch=master)
+[CTL Model Checker](https://github.com/sybila/ctl-model-checker)
 
-[CTL Query Parser](https://github.com/sybila/ctl-parser)
 [![Release](https://jitpack.io/v/sybila/ctl-parser.svg)](https://jitpack.io/#sybila/ctl-parser)
 [![Build Status](https://travis-ci.org/sybila/ctl-parser.svg?branch=master)](https://travis-ci.org/sybila/ctl-parser)
 [![codecov.io](https://codecov.io/github/sybila/ctl-parser/coverage.svg?branch=master)](https://codecov.io/github/sybila/ctl-parser?branch=master)
+[CTL Query Parser](https://github.com/sybila/ctl-parser)
 
-[ODE State Space Generator](https://github.com/sybila/ode-generator)
 [![Release](https://jitpack.io/v/sybila/ode-generator.svg)](https://jitpack.io/#sybila/ode-generator)
 [![Build Status](https://travis-ci.org/sybila/ode-generator.svg?branch=master)](https://travis-ci.org/sybila/ode-generator)
 [![codecov.io](https://codecov.io/github/sybila/ode-generator/coverage.svg?branch=master)](https://codecov.io/github/sybila/ode-generator?branch=master)
+[ODE State Space Generator](https://github.com/sybila/ode-generator)
