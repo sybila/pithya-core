@@ -60,6 +60,9 @@ fun main(args: Array<String>) {
         "ODE" -> {
             val modelConfig = ODEModelConfig(config.getMap("model"))
 
+            //copy model file into task folder
+            modelConfig.file.copyTo(File(taskRoot, modelConfig.file.name), overwrite = true)
+            
             val start = System.currentTimeMillis()
             val model = Parser().parse(modelConfig.file).apply {
                 logger.info("Model parsing finished. Running approximation...")
