@@ -4,8 +4,6 @@ import com.github.sybila.biodivine.*
 import com.github.sybila.checker.*
 import com.github.sybila.ctl.CTLParser
 import com.github.sybila.ode.generator.*
-import com.github.sybila.ode.model.Parser
-import com.github.sybila.ode.model.computeApproximation
 import java.io.File
 import java.util.concurrent.FutureTask
 import java.util.logging.FileHandler
@@ -23,15 +21,7 @@ fun main(args: Array<String>) {
     val yamlConfig = args[3].toYamlMap()
 
     //Configure default logger to match main process
-    val logger = Logger.getLogger(rootPackage)
-    logger.useParentHandlers = false
-    logger.addHandler(ConsoleHandler().apply {
-        this.level = consoleLogLevel
-        this.formatter = CleanFormatter()
-    })
-    logger.addHandler(FileHandler("${taskRoot.absolutePath}/$name-log.log").apply {
-        this.formatter = SimpleFormatter()  //NO XML!
-    })
+    val logger = getGlobalLogger(consoleLogLevel, taskRoot, name)
 
     val config = CTLParameterEstimationConfig(yamlConfig)
 
@@ -39,18 +29,8 @@ fun main(args: Array<String>) {
 
     when (config.model) {
         is ODEModelConfig -> {
-            //copy model file into task folder
-            config.model.file.copyTo(File(taskRoot, config.model.file.name), overwrite = true)
-
-            val start = System.currentTimeMillis()
-            val model = Parser().parse(config.model.file).apply {
-                logger.info("Model parsing finished. Running approximation...")
-            }.computeApproximation(
-                    fast = config.model.fastApproximation,
-                    cutToRange = config.model.cutToRange
-            )
+            val model = loadModel(config.model, taskRoot, logger)
             val nodeEncoder = NodeEncoder(model)
-            logger.info("Model approximation finished. Elapsed time: ${System.currentTimeMillis() - start}ms")
 
             //this has to be valid if starter is working fine
             val commConfig = config.communicator as SharedCommunicatorConfig
@@ -84,7 +64,7 @@ fun main(args: Array<String>) {
                             this.level = consoleLogLevel
                             this.formatter = CleanFormatter("$id: ")
                         })
-                        localLogger.addHandler(FileHandler("${taskRoot.absolutePath}/$name.$id.log").apply {
+                        localLogger.addHandler(FileHandler("${taskRoot.absolutePath}/worker.$id.log").apply {
                             this.formatter = SimpleFormatter()  //NO XML!
                         })
 
@@ -157,36 +137,3 @@ private fun <N: Node, C: Colors<C>> processResults(
     }
 }
 
-private fun <N: Node, C: Colors<C>> verify(property: PropertyConfig, parser: CTLParser, checker: ModelChecker<N, C>, logger: Logger): Nodes<N, C> {
-
-    when {
-        property.verify != null && property.formula != null ->
-                error("Invalid property. Can't specify inlined formula and verify at the same time: $property")
-        property.verify != null && property.file == null ->
-                error("Can't resolve ${property.verify}, no CTL file provided")
-        property.verify == null && property.formula == null ->
-                error("Invalid property. Missing a formula or verify clause. $property")
-    }
-
-    val f = if (property.verify != null) {
-        val formulas = parser.parse(property.file!!)
-        formulas[property.verify] ?: error("Property ${property.verify} not found in file ${property.file}")
-    } else if (property.file != null) {
-        val formulas = parser.parse("""
-                    #include "${property.file.absolutePath}"
-                    myLongPropertyNameThatNoOneWillUse = ${property.formula}
-                """)
-        formulas["myLongPropertyNameThatNoOneWillUse"]!!
-    } else {
-        parser.formula(property.formula!!)
-    }
-
-    logger.info("Start verification of $f")
-
-    val checkStart = System.currentTimeMillis()
-    val results = checker.verify(f)
-
-    logger.info("Verification finished, elapsed time: ${System.currentTimeMillis() - checkStart}ms")
-
-    return results
-}

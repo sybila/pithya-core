@@ -1,6 +1,7 @@
 package com.github.sybila.biodivine
 
 import com.github.sybila.biodivine.ctl.CTLParameterEstimationConfig
+import com.github.sybila.biodivine.ctl.NoCommunicatorConfig
 import com.github.sybila.biodivine.ctl.SharedCommunicatorConfig
 import java.io.File
 import java.util.logging.Level
@@ -32,7 +33,21 @@ fun executeTask(config: YamlMap, name: String?, root: File, consoleLogLevel: Lev
                     logger.info("Shared memory verification finished with exit code: $code")
                     code == 0
                 }
-
+                is NoCommunicatorConfig -> {    //the same as for shared comm
+                    logger.info("Starting a sequential verification process...")
+                    val code = guardedProcess(arrayOf(
+                            getJavaLocation(),
+                            "-cp", System.getProperty("java.class.path"),           //mirror current classpath (libraries, binaries)
+                            "-Xmx${taskConfig.maxMemory}M",                         //set memory limit
+                            "com.github.sybila.biodivine.ctl.EmptyCommTaskKt",      //hardcoded main, no great, but will do for now
+                            consoleLogLevel.toString().toLowerCase(),               //global log level
+                            name ?: "task",                                         //task name
+                            taskRoot.absolutePath,                                  //task path
+                            config.toString()                                       //copy of yaml config
+                    ), logger, taskConfig.timeout)
+                    logger.info("Sequential verification finished with exit code: $code")
+                    code == 0
+                }
                 else -> error("Unsupported communication method: ${taskConfig.communicator}")
             }
         }

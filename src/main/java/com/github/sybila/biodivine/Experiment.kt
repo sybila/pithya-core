@@ -45,7 +45,7 @@ fun setupExperiment(defaultName: String, yamlConfig: YamlMap): File {
         this.level = config.consoleLogLevel
         this.formatter = CleanFormatter()
     })
-    logger.addHandler(FileHandler("${root.name}/global-log.log").apply {
+    logger.addHandler(FileHandler("${root.name}/global.log").apply {
         this.formatter = SimpleFormatter()  //NO XML!
     })
 
