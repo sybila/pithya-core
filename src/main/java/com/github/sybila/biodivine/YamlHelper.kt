@@ -18,6 +18,10 @@ class YamlMap internal constructor(private val data: Map<*,*>) {
         return data[key] as String? ?: default
     }
 
+    fun getAny(key: String): Any? {
+        return data[key]
+    }
+
     fun getString(key: String): String? {
         return data[key] as String?
     }
@@ -34,8 +38,8 @@ class YamlMap internal constructor(private val data: Map<*,*>) {
         return YamlMap(data[key] as Map<*,*>? ?: mapOf<Any,Any>())
     }
 
-    fun getFile(key: String): File {
-        return File(data[key] as String)
+    fun getFile(key: String): File? {
+        return data[key]?.run { File(this as String) }
     }
 
     fun getMapList(key: String): List<YamlMap> {

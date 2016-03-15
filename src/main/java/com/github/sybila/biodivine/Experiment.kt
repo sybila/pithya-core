@@ -12,24 +12,22 @@ import java.util.logging.Logger
 import java.util.logging.SimpleFormatter
 
 data class ExperimentConfig(
-        val experiment: String,
         val printBuildInfo: Boolean,
         val printEnvironmentInfo: Boolean,
         val consoleLogLevel: Level
 ) {
-    constructor(name: String, config: YamlMap) : this(
-            config.getString("experiment", name),
-            config.getBoolean("printBuildInfo", true),
-            config.getBoolean("printEnvironmentInfo", true),
-            config.getLogLevel("consoleLogLevel", Level.INFO)
+    constructor(config: YamlMap) : this(
+            config.getBoolean(c.printBuildInfo, true),
+            config.getBoolean(c.printEnvironmentInfo, true),
+            config.getLogLevel(c.consoleLogLevel, Level.INFO)
     )
 }
 
 fun setupExperiment(defaultName: String, yamlConfig: YamlMap): File {
 
     //setup directory
-    val root = createUniqueExperimentFolder(yamlConfig.getString("experiment", defaultName))
-    val config = ExperimentConfig(root.name, yamlConfig)
+    val root = createUniqueExperimentFolder(yamlConfig.getString(c.experiment, defaultName))
+    val config = ExperimentConfig(yamlConfig)
 
     //print build/machine info
 

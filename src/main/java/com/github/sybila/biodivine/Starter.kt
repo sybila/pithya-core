@@ -14,10 +14,11 @@ val rootPackage = "com.github.sybila"
  **/
 
 fun main(args: Array<String>) {
-    if (args.size != 1) {
+   /* if (args.size != 1) {
         error("Expecting one argument that is a readable configuration file. ${args.size} arguments given.")
     }
-    val configFile = File(args[0])
+    val configFile = File(args[0])*/
+    val configFile = File("/Users/daemontus/Workspace/Sybila/experiments/config.yaml")
     if (!configFile.isFile) {
         error("Expecting one argument that is a readable configuration file. ${args[0]} is not a file.")
     }
@@ -38,17 +39,27 @@ fun main(args: Array<String>) {
 
     // Execute tasks
 
-    val tasks = yamlConfig.getMapList("tasks")
+    val tasks = yamlConfig.getMapList(c.tasks)
 
     var success = 0
-    val globalLogLevel = yamlConfig.getLogLevel("consoleLogLevel", Level.INFO)
+    val globalLogLevel = yamlConfig.getLogLevel(c.consoleLogLevel, Level.INFO)
     when (tasks.size) {
         0 -> logger.warning("No tasks specified!")
-        1 -> if (executeTask(tasks.first(), null, root, globalLogLevel)) {
+        1 -> if (executeTask(
+                config = tasks.first(),
+                name = null,
+                root = root,
+                consoleLogLevel = globalLogLevel
+        )) {
             success += 1
         }
         else -> tasks.forEachIndexed { i, task ->
-            if (executeTask(task, "task-$i", root, globalLogLevel)) {
+            if (executeTask(
+                    config = task,
+                    name = "task-$i",
+                    root = root,
+                    consoleLogLevel = globalLogLevel
+            )) {
                 success += 1
             }
         }

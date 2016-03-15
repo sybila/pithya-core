@@ -1,7 +1,6 @@
 package com.github.sybila.biodivine
 
 import java.io.File
-import java.util.concurrent.TimeUnit
 import java.util.logging.Level
 import java.util.logging.Logger
 import kotlin.concurrent.thread

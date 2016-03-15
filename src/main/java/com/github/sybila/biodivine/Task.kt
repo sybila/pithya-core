@@ -1,49 +1,33 @@
 package com.github.sybila.biodivine
 
+import com.github.sybila.biodivine.ctl.CTLParameterEstimationConfig
+import com.github.sybila.biodivine.ctl.SharedCommunicatorConfig
 import java.io.File
 import java.util.logging.Level
 import java.util.logging.Logger
 
-data class TaskConfig(
-        val type: String,
-        val workers: Int,
-        val maxMemory: Int,
-        val timeout: Int,
-        val jobQueue: String,
-        val communicator: String,
-        val partitioning: String
-) {
-    constructor(config: YamlMap) : this(
-            config.getString("type", "ctlParamEstimation"),
-            config.getInt("workers", 1),
-            config.getInt("maxMemory", 1024),
-            config.getInt("timeout", -1),
-            config.getString("jobQueue", "SingleThreadJobQueue"),
-            config.getString("communicator", "SharedMemoryCommunicator"),
-            config.getString("partitioning", "uniform")
-    )
-}
 
 fun executeTask(config: YamlMap, name: String?, root: File, consoleLogLevel: Level): Boolean {
     val logger = Logger.getLogger(rootPackage)
     val taskRoot = if (name == null) root else File(root, name)
-    val taskConfig = TaskConfig(config)
-    return when (taskConfig.type) {
+    return when (config.getString(c.type, c.ctlParameterEstimation)) {
 
-        "ctlParamEstimation" -> {
+        c.ctlParameterEstimation -> {
+            val taskConfig = CTLParameterEstimationConfig(config)
+
             when (taskConfig.communicator) {
-
-                "SharedMemoryCommunicator" -> {
+                is SharedCommunicatorConfig -> {
+                    val workers = taskConfig.communicator.workers
                     logger.info("Starting a shared memory verification process...")
                     val code = guardedProcess(arrayOf(
                         getJavaLocation(),
-                        "-cp", System.getProperty("java.class.path"),
-                        "-Xmx${taskConfig.maxMemory * taskConfig.workers}M",
-                        "com.github.sybila.biodivine.SharedMemoryTaskKt",
-                        consoleLogLevel.toString().toLowerCase(),
-                        name ?: "task",
-                        taskRoot.absolutePath,
-                        config.toString()
+                        "-cp", System.getProperty("java.class.path"),           //mirror current classpath (libraries, binaries)
+                        "-Xmx${taskConfig.maxMemory * workers}M",               //set memory limit
+                        "com.github.sybila.biodivine.ctl.SharedMemoryTaskKt",   //hardcoded main, no great, but will do for now
+                        consoleLogLevel.toString().toLowerCase(),               //global log level
+                        name ?: "task",                                         //task name
+                        taskRoot.absolutePath,                                  //task path
+                        config.toString()                                       //copy of yaml config
                     ), logger, taskConfig.timeout)
                     logger.info("Shared memory verification finished with exit code: $code")
                     code == 0
@@ -52,6 +36,6 @@ fun executeTask(config: YamlMap, name: String?, root: File, consoleLogLevel: Lev
                 else -> error("Unsupported communication method: ${taskConfig.communicator}")
             }
         }
-        else -> error("Unsupported task type: ${taskConfig.type}")
+        else -> error("Unsupported task type: ${config.getString(c.type, c.ctlParameterEstimation)}")
     }
 }

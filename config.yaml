@@ -21,31 +21,30 @@ consoleLogLevel: info # all/error/warning/info/fine/finer/finest/off, default in
 # symba in separate tasks with chainable results.
 tasks:
 
-  - type: ctlParamEstimation # default ctlParamEstimation
+  - type: CTLParameterEstimation # default CTLParameterEstimation
 
     # Timeout in seconds for this task. Negative value means no timeout.
-    timeout: 3600   #default -1  
-    # number of concurrent processes
-    workers: 4  # default 1
+    timeout: 3600   #default -1
     # maximal memory per worker in megabytes
     maxMemory: 1024 # default 1024
-    # Type of job queue. Only single thread supported for now.
-    jobQueue: SingleThreadJobQueue  # default SingleThreadJobQueue
+
+    # Type of job queue.
+    jobQueue: blockingQueue
+
     # Type of communicator. Only shared memory supported for now.
-    communicator: SharedMemoryCommunicator # default SharedMemoryCommunicator
-    partitioning: block # uniform/slice/hash/block, default uniform      
-    #if you use block partitioning, you can set additional property: blockSize - default is 100
-    blockSize: 10
+    communicator:
+      type: sharedMemory #sharedMemory/mpjLocal/mpjCluster/none default none
+      workers: 1  # default 1
+
+    partitioning:
+      type: block # uniform/slice/hash/block, default uniform
+      #if you use block partitioning, you can set additional property: blockSize - default is 100
+      blockSize: 10
 
     checker:
-      # type of results that should be printed. 
-      # size - only print size of the result set // log 
-      # stats - additional info about process // log
-      # human - print valid states in human readable format // only file   
-      results: ["size", "stats", "human"] # default []
       logLevel: error
 
-    # Ctl parser settings. 
+    # Ctl parser settings.
     ctlParser:
       # optimize formulas after parsing and normalizing (remove double negation, etc.)
       optimize: true # default true
@@ -56,16 +55,23 @@ tasks:
 
     # You can give list of several properties, each will be verified in specified order
     # A copy of the property will be also included in results
-    properties: 
+    properties:
       # You can use "inlined" formulas
       - formula: "pRB > 3.0 EU E2F1 > 6"
+        # type of results that should be printed.
+        # size - only print size of the result set // log
+        # stats - additional info about process // log
+        # human - print valid states in human readable format // only file
+        results: ["size", "stats"] # default []
       # You can specify a list of property by name from a file
       - file: "test_prop.ctl"
         verify: "bistab"
-      # You can use a hybrid notation - referencing formulas defined in a file, 
+        results: ["size", "stats", "human"]
+      # You can use a hybrid notation - referencing formulas defined in a file,
       # but ultimately verifying an inlined formula
       - file: "test_prop.ctl"
         formula: "pRB > 3.0 EU lowStable"
+        results: ["size", "stats", "human"]
 
     # Here you should specify your model. For now, only supported model type is ODE.
     # A serialized model will be also included in results.
