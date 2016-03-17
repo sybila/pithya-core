@@ -144,21 +144,25 @@ data class SharedCommunicatorConfig(
 
 data class MPJLocalCommunicatorConfig(
         val workers: Int = 1,
-        val mpjHome: File? = null
+        val mpjHome: File? = null,
+        val logLevel: Level = Level.INFO
 ) : CommunicatorConfig {
     constructor(config: YamlMap) : this (
             config.getInt(c.workers, 1),
-            config.getFile(c.mpjHome)
+            config.getFile(c.mpjHome),
+            config.getLogLevel(c.logLevel, Level.INFO)
     )
 }
 
 data class MPJClusterCommunicatorConfig(
         val workers: Int = 1,
-        val mpjHome: File? = null
+        val mpjHome: File? = null,
+        val logLevel: Level = Level.INFO
 ) : CommunicatorConfig {
     constructor(config: YamlMap) : this (
             config.getInt(c.workers, 1),
-            config.getFile(c.mpjHome)
+            config.getFile(c.mpjHome),
+            config.getLogLevel(c.logLevel, Level.INFO)
     )
 }
 

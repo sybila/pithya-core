@@ -52,7 +52,7 @@ fun main(args: Array<String>) {
             val comms = createSharedMemoryCommunicators(commConfig.workers)
             val tokens = comms.toTokenMessengers()
             val terminators = tokens.toFactories()
-            val fragments = partitions.map { p -> OdeFragment(model, p) }
+            val fragments = partitions.map { p -> RectangleOdeFragment(model, p) }
 
             fun <T: Colors<T>> runModelChecking(queues: List<JobQueue.Factory<IDNode, T>>, fragments: List<KripkeFragment<IDNode, T>>) {
                 queues.zip(fragments).mapIndexed { id, pair ->
@@ -112,28 +112,4 @@ fun main(args: Array<String>) {
 
 }
 
-private fun <N: Node, C: Colors<C>> processResults(
-        id: Int,
-        taskRoot: File,
-        queryName: String,
-        results: Nodes<N, C>,
-        stats: Map<String, Any>,
-        printConfig: Set<String>,
-        logger: Logger
-) {
-    for (printType in printConfig) {
-        when (printType) {
-            c.size -> logger.info("Results size: ${results.entries.count()}")
-            c.stats -> logger.info("Statistics: $stats")
-            c.human -> {
-                File(taskRoot, "$queryName.human.$id.txt").bufferedWriter().use {
-                    for (entry in results.entries) {
-                        it.write("${entry.key} - ${entry.value}\n")
-                    }
-                }
-            }
-            else -> error("Unknown print type: $printType")
-        }
-    }
-}
 

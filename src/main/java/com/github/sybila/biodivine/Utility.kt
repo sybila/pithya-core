@@ -1,5 +1,8 @@
 package com.github.sybila.biodivine
 
+import com.github.sybila.checker.Colors
+import com.github.sybila.checker.Node
+import com.github.sybila.checker.Nodes
 import java.io.File
 import java.util.logging.Level
 import java.util.logging.Logger
@@ -31,8 +34,34 @@ fun getJavaLocation(): String {
             } else "java"
 }
 
-fun guardedProcess(args: Array<String>, logger: Logger, timeout: Int = -1): Int {
-    val process = Runtime.getRuntime().exec(args)
+
+fun <N: Node, C: Colors<C>> processResults(
+        id: Int,
+        taskRoot: File,
+        queryName: String,
+        results: Nodes<N, C>,
+        stats: Map<String, Any>,
+        printConfig: Set<String>,
+        logger: Logger
+) {
+    for (printType in printConfig) {
+        when (printType) {
+            c.size -> logger.info("Results size: ${results.entries.count()}")
+            c.stats -> logger.info("Statistics: $stats")
+            c.human -> {
+                File(taskRoot, "$queryName.human.$id.txt").bufferedWriter().use {
+                    for (entry in results.entries) {
+                        it.write("${entry.key} - ${entry.value}\n")
+                    }
+                }
+            }
+            else -> error("Unknown print type: $printType")
+        }
+    }
+}
+
+fun guardedProcess(args: Array<String>, vars: Array<String>?, logger: Logger, timeout: Int = -1): Int {
+    val process = Runtime.getRuntime().exec(args, vars)
     val timeoutThread = if (timeout > 0) {
         thread {
             try {

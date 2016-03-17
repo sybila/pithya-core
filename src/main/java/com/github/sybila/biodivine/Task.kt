@@ -1,6 +1,7 @@
 package com.github.sybila.biodivine
 
 import com.github.sybila.biodivine.ctl.CTLParameterEstimationConfig
+import com.github.sybila.biodivine.ctl.MPJLocalCommunicatorConfig
 import com.github.sybila.biodivine.ctl.NoCommunicatorConfig
 import com.github.sybila.biodivine.ctl.SharedCommunicatorConfig
 import java.io.File
@@ -17,6 +18,31 @@ fun executeTask(config: YamlMap, name: String?, root: File, consoleLogLevel: Lev
             val taskConfig = CTLParameterEstimationConfig(config)
 
             when (taskConfig.communicator) {
+                is MPJLocalCommunicatorConfig -> {
+                    val mpjHome = taskConfig.communicator.mpjHome ?: File(System.getenv("MPJ_HOME"))
+                    if (!mpjHome.isDirectory) {
+                        error("Invalid mpj home directory: $mpjHome")
+                    }
+                    val workers = taskConfig.communicator.workers
+                    logger.info("Starting a local MPJ verification process...")
+                    val code = guardedProcess(arrayOf(
+                            getJavaLocation(),
+                            "-jar", "${mpjHome.absolutePath}/lib/starter.jar",
+                            "-np", workers.toString(),
+                            "-cp", System.getProperty("java.class.path"),
+                            "-Xmx${taskConfig.maxMemory}M",
+                            "com.github.sybila.biodivine.ctl.MPJCommTaskKt",
+                            consoleLogLevel.toString().toLowerCase(),
+                            name ?: "task",
+                            taskRoot.absolutePath,
+                            config.toString()
+                    ), arrayOf(
+                            "MPJ_HOME=${mpjHome.absolutePath}",
+                            "PATH=${mpjHome.absolutePath}/bin:${System.getenv("PATH")}"
+                    ), logger, taskConfig.timeout)
+                    logger.info("Local MPJ verification finished with exit code: $code")
+                    code == 0
+                }
                 is SharedCommunicatorConfig -> {
                     val workers = taskConfig.communicator.workers
                     logger.info("Starting a shared memory verification process...")
@@ -29,7 +55,7 @@ fun executeTask(config: YamlMap, name: String?, root: File, consoleLogLevel: Lev
                         name ?: "task",                                         //task name
                         taskRoot.absolutePath,                                  //task path
                         config.toString()                                       //copy of yaml config
-                    ), logger, taskConfig.timeout)
+                    ), null, logger, taskConfig.timeout)
                     logger.info("Shared memory verification finished with exit code: $code")
                     code == 0
                 }
@@ -44,7 +70,7 @@ fun executeTask(config: YamlMap, name: String?, root: File, consoleLogLevel: Lev
                             name ?: "task",                                         //task name
                             taskRoot.absolutePath,                                  //task path
                             config.toString()                                       //copy of yaml config
-                    ), logger, taskConfig.timeout)
+                    ), null, logger, taskConfig.timeout)
                     logger.info("Sequential verification finished with exit code: $code")
                     code == 0
                 }
