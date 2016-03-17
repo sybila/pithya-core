@@ -4,6 +4,7 @@ import com.github.sybila.checker.Colors
 import com.github.sybila.checker.Node
 import com.github.sybila.checker.Nodes
 import java.io.File
+import java.io.PrintStream
 import java.util.logging.Level
 import java.util.logging.Logger
 import kotlin.concurrent.thread
@@ -65,12 +66,15 @@ fun guardedRemoteProcess(
         args: Array<String>,
         vars: Array<String>?,
         logger: Logger, timeout: Int = -1, shouldDie: () -> Boolean): Int {
-    val sshProcess = Runtime.getRuntime().exec(arrayOf("ssh", host))
+    val command = "cd ${System.getProperty("user.dir")}; " +    //move to the right directory
+            (vars?.map { " export $it; " }?.joinToString(separator = " ") ?: "") + //add environmental variables
+            args.map { "\\\"$it\\\"" }.joinToString(separator = " ")    //escape arguments
+    val sshProcess = Runtime.getRuntime().exec(arrayOf("ssh", host, command))
     val timeoutThread = if (timeout > 0) {
         thread {
             val start = System.currentTimeMillis()
             try {
-                while (System.currentTimeMillis() - start > timeout * 1000L || shouldDie()) {
+                while (System.currentTimeMillis() - start < timeout * 1000L || !shouldDie()) {
                     Thread.sleep(1000L)
                 }
                 try {
@@ -113,11 +117,6 @@ fun guardedRemoteProcess(
             }
         }
     }
-    val command = "cd ${System.getProperty("user.dir")}; " +    //move to the right directory
-            (vars?.map { " export $it; " }?.joinToString(separator = " ") ?: "") + //add environmental variables
-            args.joinToString(separator = " ") +
-            " ; exit ; "
-    println("ssh command: $command")
     sshProcess.waitFor()
     timeoutThread?.interrupt()
     timeoutThread?.join()

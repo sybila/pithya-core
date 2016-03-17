@@ -14,11 +14,11 @@ val rootPackage = "com.github.sybila"
  **/
 
 fun main(args: Array<String>) {
-   /* if (args.size != 1) {
+    if (args.size != 1) {
         error("Expecting one argument that is a readable configuration file. ${args.size} arguments given.")
     }
-    val configFile = File(args[0])*/
-    val configFile = File("/Users/daemontus/Workspace/Sybila/experiments/config.yaml")
+    val configFile = File(args[0])
+    //val configFile = File("/Users/daemontus/Workspace/Sybila/experiments/config.yaml")
     if (!configFile.isFile) {
         error("Expecting one argument that is a readable configuration file. ${args[0]} is not a file.")
     }

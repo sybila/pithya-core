@@ -7,6 +7,7 @@ import com.github.sybila.ctl.CTLParser
 import com.github.sybila.ode.generator.*
 import mpi.MPI
 import java.io.File
+import java.util.*
 import java.util.logging.FileHandler
 import java.util.logging.Logger
 import java.util.logging.SimpleFormatter
@@ -15,6 +16,7 @@ import java.util.logging.SimpleFormatter
  * This is the main function which should execute a shared memory verification task.
  */
 fun main(args: Array<String>) {
+    println("Process started with args: ${Arrays.toString(args)}")
     MPI.Init(args)
     val consoleLogLevel = args[args.size - 4].toLogLevel()
     val name = args[args.size - 3]

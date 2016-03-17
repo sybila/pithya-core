@@ -38,8 +38,7 @@ fun executeTask(config: YamlMap, name: String?, root: File, consoleLogLevel: Lev
                                 taskRoot.absolutePath,
                                 config.toString()
                         ), arrayOf(
-                                "MPJ_HOME=${mpjHome.absolutePath}",
-                                "PATH=${mpjHome.absolutePath}/bin:${System.getenv("PATH")}"
+                                "MPJ_HOME=${mpjHome.absolutePath}"
                         ), logger, taskConfig.timeout) {
                             shouldDie
                         }
@@ -124,7 +123,7 @@ private fun createMPJConfigFile(root: File, config: MPJClusterCommunicatorConfig
         file.println("131072")  //protocol switch limit, whatever that means
         var usedPort = lowerPort
         for ((rank, host) in config.hosts.withIndex()) {
-            file.println("$host@$usedPort@${usedPort+1}@$rank$0")
+            file.println("$host@$usedPort@${usedPort+1}@$rank@0")
             usedPort += 2
             if (usedPort > upperPort) error("Ran out of ports when creating mpj config file!")
         }
