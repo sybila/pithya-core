@@ -60,6 +60,72 @@ fun <N: Node, C: Colors<C>> processResults(
     }
 }
 
+fun guardedRemoteProcess(
+        host: String,
+        args: Array<String>,
+        vars: Array<String>?,
+        logger: Logger, timeout: Int = -1, shouldDie: () -> Boolean): Int {
+    val sshProcess = Runtime.getRuntime().exec(arrayOf("ssh", host))
+    val timeoutThread = if (timeout > 0) {
+        thread {
+            val start = System.currentTimeMillis()
+            try {
+                while (System.currentTimeMillis() - start > timeout * 1000L || shouldDie()) {
+                    Thread.sleep(1000L)
+                }
+                try {
+                    sshProcess.exitValue()
+                    //Process terminated fine
+                } catch (e: IllegalThreadStateException) {
+                    //Process is still alive!
+                    sshProcess.destroy()
+                    if (shouldDie()) {
+                        logger.info("Task was killed due to an error in other process")
+                    } else {
+                        logger.info("Task was killed after exceeding timeout ${timeout}s")
+                    }
+                }
+            } catch (e: InterruptedException) {
+                //it's ok
+            }
+        }
+    } else null
+    val stdReader = thread {
+        sshProcess.inputStream.bufferedReader().use { std ->
+            if (std.ready()) {  //in case we finished before this thread even starts
+                var line = std.readLine()
+                while (line != null) {
+                    println(line)   //standard output is not logged, only printed
+                    line = std.readLine()
+                }
+            }
+        }
+    }
+    val errReader = thread {
+        sshProcess.errorStream.bufferedReader().use { err ->
+            if (err.ready()) {
+                //in case we finished before this thread even starts
+                var line = err.readLine()
+                while (line != null) {
+                    logger.severe(line)
+                    line = err.readLine()
+                }
+            }
+        }
+    }
+    val command = "cd ${System.getProperty("user.dir")}; " +    //move to the right directory
+            (vars?.map { " export $it; " }?.joinToString(separator = " ") ?: "") + //add environmental variables
+            args.joinToString(separator = " ") +
+            " ; exit ; "
+    println("ssh command: $command")
+    sshProcess.waitFor()
+    timeoutThread?.interrupt()
+    timeoutThread?.join()
+    stdReader.join()
+    errReader.join()
+    return sshProcess.exitValue()
+}
+
 fun guardedProcess(args: Array<String>, vars: Array<String>?, logger: Logger, timeout: Int = -1): Int {
     val process = Runtime.getRuntime().exec(args, vars)
     val timeoutThread = if (timeout > 0) {

@@ -29,6 +29,8 @@ class C {
         val mpjLocal = "mpjLocal"
             val mpjHome = "mpjHome"
         val mpjCluster = "mpjCluster"
+            val hosts = "hosts"
+            val portRange = "portRange"
     val jobQueue = "jobQueue"
         val blockingQueue = "blockingQueue"
     val ctlParser = "ctlParser"

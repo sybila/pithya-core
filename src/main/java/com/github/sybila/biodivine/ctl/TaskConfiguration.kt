@@ -71,7 +71,7 @@ fun YamlMap.loadCommunicatorConfig(): CommunicatorConfig = this.getAny(c.communi
         c.noCommunicator -> NoCommunicatorConfig()
         c.sharedMemory -> SharedCommunicatorConfig()
         c.mpjLocal -> MPJLocalCommunicatorConfig()
-        c.mpjCluster -> MPJClusterCommunicatorConfig()
+        c.mpjCluster -> throw IllegalArgumentException("You have to provide a worker node list in cluster configuration!")
         is Map<*,*> -> {
             val commConfig = YamlMap(this)
             when (commConfig.getString(c.type)) {
@@ -155,14 +155,16 @@ data class MPJLocalCommunicatorConfig(
 }
 
 data class MPJClusterCommunicatorConfig(
-        val workers: Int = 1,
         val mpjHome: File? = null,
-        val logLevel: Level = Level.INFO
+        val logLevel: Level = Level.INFO,
+        val hosts: List<String>,
+        val portRange: String
 ) : CommunicatorConfig {
     constructor(config: YamlMap) : this (
-            config.getInt(c.workers, 1),
             config.getFile(c.mpjHome),
-            config.getLogLevel(c.logLevel, Level.INFO)
+            config.getLogLevel(c.logLevel, Level.INFO),
+            config.getStringList(c.hosts),
+            config.getString(c.portRange) ?: throw IllegalArgumentException("Port range not provided!")
     )
 }
 
