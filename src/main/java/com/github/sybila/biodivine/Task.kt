@@ -21,13 +21,14 @@ fun executeTask(config: YamlMap, name: String?, root: File, consoleLogLevel: Lev
                     if (!mpjHome.isDirectory) {
                         error("Invalid mpj home directory: $mpjHome")
                     }
+                    val classPath = "${mpjHome.absolutePath}/lib/mpj.jar${System.getProperty("path.separator")}${System.getProperty("java.class.path")}"
                     logger.info("Starting a cluster MPJ verification process... ${taskConfig.communicator.hosts}")
                     var shouldDie = false
                     taskConfig.communicator.hosts.mapIndexed { rank, host -> guardedThread {
                         logger.info("Starting process $rank")
                         val code = guardedRemoteProcess(host, arrayOf(
                                 getJavaLocation(),
-                                "-cp", System.getProperty("java.class.path"),
+                                "-cp", classPath,
                                 "-Xmx${taskConfig.maxMemory}M",
                                 "com.github.sybila.biodivine.ctl.MPJCommTaskKt",
                                 rank.toString(),
