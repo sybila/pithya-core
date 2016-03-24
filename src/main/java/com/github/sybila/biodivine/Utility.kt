@@ -3,6 +3,7 @@ package com.github.sybila.biodivine
 import com.github.sybila.checker.Colors
 import com.github.sybila.checker.Node
 import com.github.sybila.checker.Nodes
+import com.github.sybila.ode.generator.smt.SMTColors
 import java.io.File
 import java.io.PrintStream
 import java.util.logging.Level
@@ -52,7 +53,14 @@ fun <N: Node, C: Colors<C>> processResults(
             c.human -> {
                 File(taskRoot, "$queryName.human.$id.txt").bufferedWriter().use {
                     for (entry in results.entries) {
-                        it.write("${entry.key} - ${entry.value}\n")
+                        if (entry.value is SMTColors) {
+                            val colors = entry.value as SMTColors
+                            if (colors.isNotEmpty()) {  //force normalisation
+                                it.write("${entry.key} - ${colors.normalize()}\n")
+                            }
+                        } else {
+                            it.write("${entry.key} - ${entry.value}\n")
+                        }
                     }
                 }
             }
