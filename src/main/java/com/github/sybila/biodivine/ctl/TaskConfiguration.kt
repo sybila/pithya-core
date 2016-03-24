@@ -209,12 +209,14 @@ interface ModelConfig
 data class ODEModelConfig(
         val file: File,
         val fastApproximation: Boolean,
-        val cutToRange: Boolean
+        val cutToRange: Boolean,
+        val selfLoops: Boolean
 ) : ModelConfig {
     constructor(config: YamlMap) : this(
             config.getFile(c.file) ?: throw IllegalArgumentException("You have to provide an ODE model file!"),
             config.getBoolean(c.fastApproximation, false),
-            config.getBoolean(c.cutToRange, false)
+            config.getBoolean(c.cutToRange, false),
+            config.getBoolean(c.selfLoops, true)
     )
 }
 

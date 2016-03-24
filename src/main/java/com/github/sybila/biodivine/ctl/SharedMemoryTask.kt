@@ -100,10 +100,10 @@ fun main(args: Array<String>) {
 
             when (config.colors) {
                 is RectangularColorsConfig -> {
-                    runModelChecking(partitions.map { p -> RectangleOdeFragment(model, p) })
+                    runModelChecking(partitions.map { p -> RectangleOdeFragment(model, p, config.model.selfLoops) })
                 }
                 is SMTColorsConfig -> {
-                    runModelChecking(partitions.map { p -> SMTOdeFragment(model, p) })
+                    runModelChecking(partitions.map { p -> SMTOdeFragment(model, p, config.model.selfLoops) })
                 }
                 else -> throw IllegalArgumentException("Unsupported colors ${config.colors}")
             }

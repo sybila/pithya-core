@@ -49,6 +49,7 @@ class C {
             val file = "file"
             val fastApproximation = "fastApproximation"
             val cutToRange = "cutToRange"
+            val selfLoops = "selfLoops"
     val checker = "checker"
     val colors = "colors"
         val rectangular = "rectangular"
