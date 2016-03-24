@@ -3,7 +3,12 @@ package com.github.sybila.biodivine.ctl
 import com.github.sybila.biodivine.*
 import com.github.sybila.checker.*
 import com.github.sybila.ctl.CTLParser
-import com.github.sybila.ode.generator.*
+import com.github.sybila.ode.generator.ChequerPartitioning
+import com.github.sybila.ode.generator.HashPartitioning
+import com.github.sybila.ode.generator.NodeEncoder
+import com.github.sybila.ode.generator.SlicePartitioning
+import com.github.sybila.ode.generator.rect.RectangleOdeFragment
+import com.github.sybila.ode.generator.smt.SMTOdeFragment
 import java.io.File
 import java.util.concurrent.FutureTask
 import java.util.logging.FileHandler
@@ -52,9 +57,14 @@ fun main(args: Array<String>) {
             val comms = createSharedMemoryCommunicators(commConfig.workers)
             val tokens = comms.toTokenMessengers()
             val terminators = tokens.toFactories()
-            val fragments = partitions.map { p -> RectangleOdeFragment(model, p) }
 
-            fun <T: Colors<T>> runModelChecking(queues: List<JobQueue.Factory<IDNode, T>>, fragments: List<KripkeFragment<IDNode, T>>) {
+            fun <T: Colors<T>> runModelChecking(fragments: List<KripkeFragment<IDNode, T>>) {
+                val queues = when (config.jobQueue) {
+                    is BlockingJobQueueConfig -> createSingleThreadJobQueues<IDNode, T>(
+                            commConfig.workers, partitions, comms, terminators, logger
+                    )
+                    else -> throw IllegalArgumentException("Unsupported job queue ${config.jobQueue}")
+                }
                 queues.zip(fragments).mapIndexed { id, pair ->
                     FutureTask {
                         //init local task handler
@@ -90,17 +100,10 @@ fun main(args: Array<String>) {
 
             when (config.colors) {
                 is RectangularColorsConfig -> {
-                    val queues = when (config.jobQueue) {
-                        is BlockingJobQueueConfig -> createSingleThreadJobQueues<IDNode, RectangleColors>(
-                                commConfig.workers, partitions, comms, terminators
-                        )
-                        else -> throw IllegalArgumentException("Unsupported job queue ${config.jobQueue}")
-                    }
-                    runModelChecking(queues, fragments)
+                    runModelChecking(partitions.map { p -> RectangleOdeFragment(model, p) })
                 }
                 is SMTColorsConfig -> {
-                    logger.severe("SMT colors are currently not supported")
-                    listOf<JobQueue.Factory<IDNode, *>>()
+                    runModelChecking(partitions.map { p -> SMTOdeFragment(model, p) })
                 }
                 else -> throw IllegalArgumentException("Unsupported colors ${config.colors}")
             }
