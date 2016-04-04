@@ -11,6 +11,7 @@ import com.github.sybila.ode.generator.partitioning.HashPartitioning
 import com.github.sybila.ode.generator.partitioning.SlicePartitioning
 import com.github.sybila.ode.generator.rect.RectangleMPJCommunicator
 import com.github.sybila.ode.generator.rect.RectangleOdeFragment
+import com.github.sybila.ode.generator.smt.SMTMPJCommunicator
 import com.github.sybila.ode.generator.smt.SMTOdeFragment
 import mpi.MPI
 import java.io.File
@@ -112,7 +113,7 @@ fun main(args: Array<String>) {
                 is SMTColorsConfig -> {
                     val fragment = SMTOdeFragment(model, partition)
                     val token = CommunicatorTokenMessenger(id, workerCount)
-                    val comm = com.github.sybila.ode.generator.smt.RectangleMPJCommunicator(
+                    val comm = SMTMPJCommunicator(
                             id, workerCount, fragment.order, MPJComm(MPI.COMM_WORLD), Logger.getLogger("$rootPackage.$id.comm").apply {
                         level = commLogLevel
                     }, { m -> token.invoke(m) })
