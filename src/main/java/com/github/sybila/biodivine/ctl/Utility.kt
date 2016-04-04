@@ -41,7 +41,10 @@ fun loadModel(
         logger: Logger
 ): Model {
     //copy model file into task folder
-    config.file.copyTo(File(taskRoot, config.file.name), overwrite = true)
+    val dest = File(taskRoot, config.file.name)
+    if (!dest.exists()) {
+        config.file.copyTo(dest, overwrite = true)
+    }
 
     val start = System.currentTimeMillis()
     val model = Parser().parse(config.file).apply {
