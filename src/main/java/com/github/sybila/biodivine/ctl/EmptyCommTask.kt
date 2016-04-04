@@ -1,13 +1,18 @@
 package com.github.sybila.biodivine.ctl
 
 import com.github.daemontus.jafra.Terminator
-import com.github.sybila.biodivine.c
+import com.github.daemontus.jafra.Token
 import com.github.sybila.biodivine.rootPackage
 import com.github.sybila.biodivine.toLogLevel
 import com.github.sybila.biodivine.toYamlMap
 import com.github.sybila.checker.*
 import com.github.sybila.ctl.CTLParser
-import com.github.sybila.ode.generator.*
+import com.github.sybila.ode.generator.NodeEncoder
+import com.github.sybila.ode.generator.partitioning.BlockPartitioning
+import com.github.sybila.ode.generator.partitioning.HashPartitioning
+import com.github.sybila.ode.generator.partitioning.SlicePartitioning
+import com.github.sybila.ode.generator.rect.RectangleOdeFragment
+import com.github.sybila.ode.generator.smt.SMTOdeFragment
 import java.io.File
 import java.util.logging.Logger
 
@@ -40,72 +45,84 @@ fun main(args: Array<String>) {
                 is UniformPartitionConfig -> UniformPartitionFunction<IDNode>()
                 is SlicePartitionConfig -> SlicePartitioning(0, 1, nodeEncoder)
                 is HashPartitionConfig -> HashPartitioning(0, 1, nodeEncoder)
-                is BlockPartitionConfig -> ChequerPartitioning(0, 1, config.partitioning.blockSize, nodeEncoder)
+                is BlockPartitionConfig -> BlockPartitioning(0, 1, config.partitioning.blockSize, nodeEncoder)
                 else -> throw IllegalArgumentException("Unsupported partitioning: ${config.partitioning}")
             }
 
             val comm = EmptyCommunicator()
-            val token = CommunicatorTokenMessenger(comm)
-            val terminator = Terminator.Factory(token)
-            val fragment = RectangleOdeFragment(model, partition)
+            val tokens = CommunicatorTokenMessenger(comm.id, comm.size)
+            tokens.comm = comm
+            comm.addListener(Token::class.java) { m -> tokens.invoke(m) }
+            val terminator = Terminator.Factory(tokens)
 
-            fun <T: Colors<T>> runModelChecking(queue: JobQueue.Factory<IDNode, T>, fragment: KripkeFragment<IDNode, T>) {
-                val checker = ModelChecker(fragment, queue, Logger.getLogger("$rootPackage.checker").apply {
+            fun <T: Colors<T>> runModelChecking(fragment: KripkeFragment<IDNode, T>) {
+                val queues = when (config.jobQueue) {
+                    is BlockingJobQueueConfig -> createSingleThreadJobQueues<IDNode, T>(
+                            1, listOf(partition), listOf(comm), listOf(terminator), logger
+                    )
+                    is BlockingJobQueueConfig -> createMergeQueues<IDNode, T>(
+                            1, listOf(partition), listOf(comm), listOf(terminator), logger
+                    )
+                    else -> throw IllegalArgumentException("Unsupported job queue ${config.jobQueue}")
+                }
+                val checker = ModelChecker(fragment, queues.first(), Logger.getLogger("$rootPackage.checker").apply {
                     level = config.checker.logLevel
                 })
 
                 val properties = yamlConfig.loadPropertyList()
                 for (i in properties.indices) {
                     val result = verify(properties[i], ctlParser, checker, logger)
-                    processResults(taskRoot, "query-$i", result, checker.getStats(), properties[i].results, logger)
-                    checker.resetStats()
+                    com.github.sybila.biodivine.processResults(
+                            0, taskRoot, "query-$i", result,
+                            checker, nodeEncoder, model, properties[i].results, logger, fragment is SMTOdeFragment)
                 }
             }
 
             when (config.colors) {
                 is RectangularColorsConfig -> {
-                    val queues = when (config.jobQueue) {
-                        is BlockingJobQueueConfig -> createSingleThreadJobQueues<IDNode, RectangleColors>(
-                                1, listOf(partition), listOf(comm), listOf(terminator)
-                        )
-                        else -> throw IllegalArgumentException("Unsupported job queue ${config.jobQueue}")
-                    }
-                    runModelChecking(queues.first(), fragment)
+                    runModelChecking(RectangleOdeFragment(model, partition))
                 }
                 is SMTColorsConfig -> {
-                    logger.severe("SMT colors are currently not supported")
-                    listOf<JobQueue.Factory<IDNode, *>>()
+                    runModelChecking(SMTOdeFragment(model, partition))
                 }
                 else -> throw IllegalArgumentException("Unsupported colors ${config.colors}")
             }
 
-            token.close()
+            tokens.close()
             comm.close()
         }
     }
 
 }
 
-private fun <N: Node, C: Colors<C>> processResults(
-        taskRoot: File,
-        queryName: String,
-        results: Nodes<N, C>,
-        stats: Map<String, Any>,
-        printConfig: Set<String>,
+fun <N: Node, C: Colors<C>> createSingleThreadJobQueues(
+        processCount: Int,
+        partitioning: List<PartitionFunction<N>> = (1..processCount).map { UniformPartitionFunction<N>(it - 1) },
+        communicators: List<Communicator>,
+        terminators: List<Terminator.Factory>,
         logger: Logger
-) {
-    for (printType in printConfig) {
-        when (printType) {
-            c.size -> logger.info("Results size: ${results.entries.count()}")
-            c.stats -> logger.info("Statistics: $stats")
-            c.human -> {
-                File(taskRoot, "$queryName.human.txt").bufferedWriter().use {
-                    for (entry in results.entries) {
-                        it.write("${entry.key} - ${entry.value}\n")
-                    }
-                }
+): List<JobQueue.Factory<N, C>> {
+    return (0..(processCount-1)).map { i ->
+        object : JobQueue.Factory<N, C> {
+            override fun createNew(initial: List<Job<N, C>>, onTask: JobQueue<N, C>.(Job<N, C>) -> Unit): JobQueue<N, C> {
+                return SingleThreadQueue(initial, communicators[i], terminators[i], partitioning[i], onTask, logger)
             }
-            else -> error("Unknown print type: $printType")
+        }
+    }
+}
+
+fun <N: Node, C: Colors<C>> createMergeQueues(
+        processCount: Int,
+        partitioning: List<PartitionFunction<N>> = (1..processCount).map { UniformPartitionFunction<N>(it - 1) },
+        communicators: List<Communicator>,
+        terminators: List<Terminator.Factory>,
+        logger: Logger
+): List<JobQueue.Factory<N, C>> {
+    return (0..(processCount-1)).map { i ->
+        object : JobQueue.Factory<N, C> {
+            override fun createNew(initial: List<Job<N, C>>, onTask: JobQueue<N, C>.(Job<N, C>) -> Unit): JobQueue<N, C> {
+                return MergeQueue(initial, communicators[i], terminators[i], partitioning[i], onTask, logger)
+            }
         }
     }
 }

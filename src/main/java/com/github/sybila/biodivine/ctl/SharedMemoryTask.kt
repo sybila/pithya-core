@@ -1,12 +1,14 @@
 package com.github.sybila.biodivine.ctl
 
+import com.github.daemontus.egholm.thread.guardedThread
+import com.github.daemontus.jafra.Token
 import com.github.sybila.biodivine.*
 import com.github.sybila.checker.*
 import com.github.sybila.ctl.CTLParser
-import com.github.sybila.ode.generator.ChequerPartitioning
-import com.github.sybila.ode.generator.HashPartitioning
 import com.github.sybila.ode.generator.NodeEncoder
-import com.github.sybila.ode.generator.SlicePartitioning
+import com.github.sybila.ode.generator.partitioning.BlockPartitioning
+import com.github.sybila.ode.generator.partitioning.HashPartitioning
+import com.github.sybila.ode.generator.partitioning.SlicePartitioning
 import com.github.sybila.ode.generator.rect.RectangleOdeFragment
 import com.github.sybila.ode.generator.smt.SMTOdeFragment
 import java.io.File
@@ -49,18 +51,25 @@ fun main(args: Array<String>) {
                     is UniformPartitionConfig -> UniformPartitionFunction<IDNode>()
                     is SlicePartitionConfig -> SlicePartitioning(id, commConfig.workers, nodeEncoder)
                     is HashPartitionConfig -> HashPartitioning(id, commConfig.workers, nodeEncoder)
-                    is BlockPartitionConfig -> ChequerPartitioning(id, commConfig.workers, config.partitioning.blockSize, nodeEncoder)
+                    is BlockPartitionConfig -> BlockPartitioning(id, commConfig.workers, config.partitioning.blockSize, nodeEncoder)
                     else -> throw IllegalArgumentException("Unsupported partitioning: ${config.partitioning}")
                 }
             }
 
             val comms = createSharedMemoryCommunicators(commConfig.workers)
-            val tokens = comms.toTokenMessengers()
+            val tokens = comms.map { CommunicatorTokenMessenger(it.id, it.size) }
+            tokens.zip(comms).forEach {
+                it.first.comm = it.second
+                it.second.addListener(Token::class.java) { m -> it.first.invoke(m) }
+            }
             val terminators = tokens.toFactories()
 
             fun <T: Colors<T>> runModelChecking(fragments: List<KripkeFragment<IDNode, T>>) {
                 val queues = when (config.jobQueue) {
                     is BlockingJobQueueConfig -> createSingleThreadJobQueues<IDNode, T>(
+                            commConfig.workers, partitions, comms, terminators, logger
+                    )
+                    is MergeQueueConfig -> createMergeQueues<IDNode, T>(
                             commConfig.workers, partitions, comms, terminators, logger
                     )
                     else -> throw IllegalArgumentException("Unsupported job queue ${config.jobQueue}")
@@ -85,8 +94,9 @@ fun main(args: Array<String>) {
                         val properties = yamlConfig.loadPropertyList()
                         for (i in properties.indices) {
                             val result = verify(properties[i], ctlParser, checker, localLogger)
-                            processResults(id, taskRoot, "query-$i", result, checker.getStats(), properties[i].results, localLogger)
-                            checker.resetStats()
+                            processResults(
+                                    id, taskRoot, "query-$i", result,
+                                    checker, nodeEncoder, model, properties[i].results, localLogger, pair.second is SMTOdeFragment)
                         }
                     }
                 }.map {
@@ -103,7 +113,10 @@ fun main(args: Array<String>) {
                     runModelChecking(partitions.map { p -> RectangleOdeFragment(model, p, config.model.selfLoops) })
                 }
                 is SMTColorsConfig -> {
-                    runModelChecking(partitions.map { p -> SMTOdeFragment(model, p, config.model.selfLoops) })
+                    runModelChecking(partitions.map { p -> SMTOdeFragment(
+                            model, p,
+                            config.model.selfLoops
+                    ) })
                 }
                 else -> throw IllegalArgumentException("Unsupported colors ${config.colors}")
             }

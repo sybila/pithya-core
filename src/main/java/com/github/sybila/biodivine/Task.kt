@@ -1,7 +1,7 @@
 package com.github.sybila.biodivine
 
+import com.github.daemontus.egholm.thread.guardedThread
 import com.github.sybila.biodivine.ctl.*
-import com.github.sybila.checker.guardedThread
 import java.io.File
 import java.util.logging.Level
 import java.util.logging.Logger

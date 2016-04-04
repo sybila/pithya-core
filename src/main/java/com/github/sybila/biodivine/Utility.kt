@@ -1,9 +1,12 @@
 package com.github.sybila.biodivine
 
-import com.github.sybila.checker.Colors
-import com.github.sybila.checker.Node
-import com.github.sybila.checker.Nodes
-import com.github.sybila.ode.generator.smt.SMTColors
+import com.github.daemontus.egholm.logger.severeLoggers
+import com.github.daemontus.jafra.Terminator
+import com.github.sybila.checker.*
+import com.github.sybila.ode.generator.NodeEncoder
+import com.github.sybila.ode.generator.rect.RectangleColors
+import com.github.sybila.ode.generator.smt.*
+import com.github.sybila.ode.model.Model
 import java.io.File
 import java.io.PrintStream
 import java.util.logging.Level
@@ -36,31 +39,73 @@ fun getJavaLocation(): String {
             } else "java"
 }
 
+fun <C: Colors<C>> Nodes<IDNode, C>.prettyPrint(model: Model, encoder: NodeEncoder): String {
+    return this.entries.map {
+        "\n${it.key.prettyPrint(model, encoder)} - ${it.value}"
+    }.joinToString()
+}
 
-fun <N: Node, C: Colors<C>> processResults(
+fun IDNode.prettyPrint(model: Model, encoder: NodeEncoder): String {
+    val coordinates = encoder.decodeNode(this)
+    return coordinates.mapIndexed { i, c ->
+        val t = model.variables[i].thresholds
+        "[${t[c]},${t[c+1]}]($c)"
+    }.joinToString()+"{${this.id}}"
+}
+
+fun <N: Node, C: Colors<C>> clearStats(modelChecker: ModelChecker<N, C>, smt: Boolean) {
+    modelChecker.timeInGenerator = 0
+    modelChecker.verificationTime = 0
+
+    if (smt) {
+        timeInSimplify = 0
+        simplifyCacheHit = 0
+        simplifyCalls = 0
+        solverCalls = 0
+        timeInSolver = 0
+        solverCacheHit = 0
+        timeInOrdering = 0
+        solverCallsInOrdering = 0
+    }
+}
+
+fun <N: Node, C: Colors<C>> printStats(logger: Logger, modelChecker: ModelChecker<N, C>, smt: Boolean) {
+    fun Long.toMillis() = (this / (1000 * 1000))
+    logger.info("Time in generator: ${modelChecker.timeInGenerator.toMillis()}ms")
+    logger.info("Verification time: ${modelChecker.verificationTime.toMillis()}ms")
+    if (smt) {  //don't load z3 if not needed
+        logger.info("Time in simplify: ${timeInSimplify.toMillis()}ms")
+        logger.info("Time in solver: ${timeInSolver.toMillis()}ms")
+        logger.info("Time in ordering: ${timeInOrdering.toMillis()}ms")
+        logger.info("Solver calls in ordering: ${solverCallsInOrdering}")
+        logger.info("Simplify cache hit: $simplifyCacheHit/$simplifyCalls")
+        logger.info("Solver cache hit: $solverCacheHit vs. $solverCalls")
+    }
+    clearStats(modelChecker, smt)
+}
+
+fun <C: Colors<C>> processResults(
         id: Int,
         taskRoot: File,
         queryName: String,
-        results: Nodes<N, C>,
-        stats: Map<String, Any>,
+        results: Nodes<IDNode, C>,
+        checker: ModelChecker<IDNode, C>,
+        encoder: NodeEncoder,
+        model: Model,
         printConfig: Set<String>,
-        logger: Logger
+        logger: Logger,
+        smt: Boolean
 ) {
     for (printType in printConfig) {
         when (printType) {
             c.size -> logger.info("Results size: ${results.entries.count()}")
-            c.stats -> logger.info("Statistics: $stats")
+            c.stats -> {
+                printStats(logger, checker, smt)
+            }
             c.human -> {
                 File(taskRoot, "$queryName.human.$id.txt").bufferedWriter().use {
                     for (entry in results.entries) {
-                        if (entry.value is SMTColors) {
-                            val colors = entry.value as SMTColors
-                            if (colors.isNotEmpty()) {  //force normalisation
-                                it.write("${entry.key} - ${colors.normalize()}\n")
-                            }
-                        } else {
-                            it.write("${entry.key} - ${entry.value}\n")
-                        }
+                        it.write("${entry.key.prettyPrint(model, encoder)} - ${entry.value}\n")
                     }
                 }
             }

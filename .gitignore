@@ -16,3 +16,6 @@ build
 ## File-based project format:
 *.ipr
 *.iws
+
+## Ignore experiments
+ex_*

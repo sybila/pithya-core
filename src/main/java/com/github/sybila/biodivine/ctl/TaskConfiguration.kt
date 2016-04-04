@@ -55,10 +55,12 @@ fun YamlMap.loadPartitioningConfig(): PartitioningConfig = this.getAny(c.partiti
 fun YamlMap.loadJobQueueConfig(): JobQueueConfig = this.getAny(c.jobQueue)?.run {
     when (this) {
         c.blockingQueue -> BlockingJobQueueConfig()
+        c.mergeQueue -> MergeQueueConfig()
         is Map<*,*> -> {
             val queueConfig = YamlMap(this)
             when (queueConfig.getString(c.type)) {
                 c.blockingQueue -> BlockingJobQueueConfig(queueConfig)
+                c.mergeQueue -> MergeQueueConfig(queueConfig)
                 else -> throw IllegalArgumentException("Unsupported job queue config: $this")
             }
         }
@@ -175,6 +177,14 @@ data class MPJClusterCommunicatorConfig(
 interface JobQueueConfig
 
 data class BlockingJobQueueConfig(
+        val logLevel: Level = Level.INFO
+) : JobQueueConfig {
+    constructor(config: YamlMap) : this (
+            config.getLogLevel(c.logLevel, Level.INFO)
+    )
+}
+
+data class MergeQueueConfig(
         val logLevel: Level = Level.INFO
 ) : JobQueueConfig {
     constructor(config: YamlMap) : this (

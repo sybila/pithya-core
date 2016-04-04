@@ -33,6 +33,7 @@ class C {
             val portRange = "portRange"
     val jobQueue = "jobQueue"
         val blockingQueue = "blockingQueue"
+        val mergeQueue = "mergeQueue"
     val ctlParser = "ctlParser"
         val normalForm = "normalForm"
             val until = "until"

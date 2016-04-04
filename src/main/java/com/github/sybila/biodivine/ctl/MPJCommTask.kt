@@ -4,7 +4,14 @@ import com.github.daemontus.jafra.Terminator
 import com.github.sybila.biodivine.*
 import com.github.sybila.checker.*
 import com.github.sybila.ctl.CTLParser
-import com.github.sybila.ode.generator.*
+import com.github.sybila.ode.generator.MPJComm
+import com.github.sybila.ode.generator.NodeEncoder
+import com.github.sybila.ode.generator.partitioning.BlockPartitioning
+import com.github.sybila.ode.generator.partitioning.HashPartitioning
+import com.github.sybila.ode.generator.partitioning.SlicePartitioning
+import com.github.sybila.ode.generator.rect.RectangleMPJCommunicator
+import com.github.sybila.ode.generator.rect.RectangleOdeFragment
+import com.github.sybila.ode.generator.smt.SMTOdeFragment
 import mpi.MPI
 import java.io.File
 import java.util.*
@@ -53,54 +60,67 @@ fun main(args: Array<String>) {
                 }
                 is SlicePartitionConfig -> SlicePartitioning(id, workerCount, nodeEncoder)
                 is HashPartitionConfig -> HashPartitioning(id, workerCount, nodeEncoder)
-                is BlockPartitionConfig -> ChequerPartitioning(id, workerCount, config.partitioning.blockSize, nodeEncoder)
+                is BlockPartitionConfig -> BlockPartitioning(id, workerCount, config.partitioning.blockSize, nodeEncoder)
                 else -> throw IllegalArgumentException("Unsupported partitioning: ${config.partitioning}")
             }
 
             val commConfig = config.communicator as MPJLocalCommunicatorConfig
 
-            val comm = MPJCommunicator(id, workerCount, model.parameters.size, MPJComm(MPI.COMM_WORLD), Logger.getLogger("$rootPackage.$id.comm").apply {
-                level = commConfig.logLevel
-            })
-            val token = CommunicatorTokenMessenger(comm)
-            val terminator = Terminator.Factory(token)
-            val fragment = RectangleOdeFragment(model, partition)
-
-            fun <T: Colors<T>> runModelChecking(queue: JobQueue.Factory<IDNode, T>, fragment: KripkeFragment<IDNode, T>) {
-                val checker = ModelChecker(fragment, queue, Logger.getLogger("$rootPackage.checker").apply {
+            fun <T: Colors<T>> runModelChecking(comm: Communicator, terminator: Terminator.Factory, fragment: KripkeFragment<IDNode, T>) {
+                val queues = when (config.jobQueue) {
+                    is BlockingJobQueueConfig -> createSingleThreadJobQueues<IDNode, T>(
+                            1, listOf(partition), listOf(comm), listOf(terminator), logger
+                    )
+                    is BlockingJobQueueConfig -> createMergeQueues<IDNode, T>(
+                            1, listOf(partition), listOf(comm), listOf(terminator), logger
+                    )
+                    else -> throw IllegalArgumentException("Unsupported job queue ${config.jobQueue}")
+                }
+                val checker = ModelChecker(fragment, queues.first(), Logger.getLogger("$rootPackage.checker").apply {
                     level = config.checker.logLevel
                 })
 
                 val properties = yamlConfig.loadPropertyList()
                 for (i in properties.indices) {
                     val result = verify(properties[i], ctlParser, checker, logger)
-                    processResults(id, taskRoot, "query-$i", result, checker.getStats(), properties[i].results, logger)
-                    checker.resetStats()
+                    processResults(
+                            id, taskRoot, "query-$i", result,
+                            checker, nodeEncoder, model, properties[i].results, logger, fragment is SMTOdeFragment)
                 }
             }
 
             when (config.colors) {
                 is RectangularColorsConfig -> {
-                    val queues = when (config.jobQueue) {
-                        is BlockingJobQueueConfig -> createSingleThreadJobQueues<IDNode, RectangleColors>(
-                                1, listOf(partition), listOf(comm), listOf(terminator)
-                        )
-                        else -> throw IllegalArgumentException("Unsupported job queue ${config.jobQueue}")
-                    }
-                    runModelChecking(queues.first(), fragment)
+                    val fragment = RectangleOdeFragment(model, partition)
+                    val token = CommunicatorTokenMessenger(id, workerCount)
+                    val comm = RectangleMPJCommunicator(id, workerCount, model.parameters.size, MPJComm(MPI.COMM_WORLD), Logger.getLogger("$rootPackage.$id.comm").apply {
+                        level = commConfig.logLevel
+                    }, { m -> token.invoke(m) })
+                    token.comm = comm
+                    val terminator = Terminator.Factory(token)
+                    runModelChecking(comm, terminator, fragment)
+                    token.close()
+                    logger.info("Tokens closed")
+                    comm.close()
+                    logger.info("Comm closed")
                 }
                 is SMTColorsConfig -> {
-                    logger.severe("SMT colors are currently not supported")
-                    listOf<JobQueue.Factory<IDNode, *>>()
+                    val fragment = SMTOdeFragment(model, partition)
+                    val token = CommunicatorTokenMessenger(id, workerCount)
+                    val comm = com.github.sybila.ode.generator.smt.RectangleMPJCommunicator(
+                            id, workerCount, fragment.order, MPJComm(MPI.COMM_WORLD), Logger.getLogger("$rootPackage.$id.comm").apply {
+                        level = commConfig.logLevel
+                    }, { m -> token.invoke(m) })
+                    token.comm = comm
+                    val terminator = Terminator.Factory(token)
+                    runModelChecking(comm, terminator, fragment)
+                    token.close()
+                    logger.info("Tokens closed")
+                    comm.close()
+                    logger.info("Comm closed")
                 }
                 else -> throw IllegalArgumentException("Unsupported colors ${config.colors}")
             }
-
-
-            token.close()
-            logger.info("Tokens closed")
-            comm.close()
-            logger.info("Comm closed")
         }
     }
 
