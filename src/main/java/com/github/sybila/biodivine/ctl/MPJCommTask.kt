@@ -19,11 +19,17 @@ import java.util.*
 import java.util.logging.FileHandler
 import java.util.logging.Logger
 import java.util.logging.SimpleFormatter
+import kotlin.system.exitProcess
 
 /**
  * This is the main function which should execute a shared memory verification task.
  */
 fun main(args: Array<String>) {
+    Thread.setDefaultUncaughtExceptionHandler({ thread, throwable ->
+        throwable.printStackTrace()
+        println("Uncaught exception in $thread, exitting...")
+        exitProcess(-1)
+    })
     //println("Process started with args: ${Arrays.toString(args)}")
     MPI.Init(args)
     val consoleLogLevel = args[args.size - 4].toLogLevel()
