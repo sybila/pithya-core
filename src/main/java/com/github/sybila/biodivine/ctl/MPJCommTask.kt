@@ -64,7 +64,12 @@ fun main(args: Array<String>) {
                 else -> throw IllegalArgumentException("Unsupported partitioning: ${config.partitioning}")
             }
 
-            val commConfig = config.communicator as MPJLocalCommunicatorConfig
+            val commConfig = config.communicator
+            val commLogLevel = when {
+                commConfig is MPJClusterCommunicatorConfig -> commConfig.logLevel
+                commConfig is MPJLocalCommunicatorConfig -> commConfig.logLevel
+                else -> throw IllegalStateException("Unsupported comm: $commConfig")
+            }
 
             fun <T: Colors<T>> runModelChecking(comm: Communicator, terminator: Terminator.Factory, fragment: KripkeFragment<IDNode, T>) {
                 val queues = when (config.jobQueue) {
@@ -94,7 +99,7 @@ fun main(args: Array<String>) {
                     val fragment = RectangleOdeFragment(model, partition)
                     val token = CommunicatorTokenMessenger(id, workerCount)
                     val comm = RectangleMPJCommunicator(id, workerCount, model.parameters.size, MPJComm(MPI.COMM_WORLD), Logger.getLogger("$rootPackage.$id.comm").apply {
-                        level = commConfig.logLevel
+                        level = commLogLevel
                     }, { m -> token.invoke(m) })
                     token.comm = comm
                     val terminator = Terminator.Factory(token)
@@ -109,7 +114,7 @@ fun main(args: Array<String>) {
                     val token = CommunicatorTokenMessenger(id, workerCount)
                     val comm = com.github.sybila.ode.generator.smt.RectangleMPJCommunicator(
                             id, workerCount, fragment.order, MPJComm(MPI.COMM_WORLD), Logger.getLogger("$rootPackage.$id.comm").apply {
-                        level = commConfig.logLevel
+                        level = commLogLevel
                     }, { m -> token.invoke(m) })
                     token.comm = comm
                     val terminator = Terminator.Factory(token)
