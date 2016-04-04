@@ -56,6 +56,7 @@ fun IDNode.prettyPrint(model: Model, encoder: NodeEncoder): String {
 fun <N: Node, C: Colors<C>> clearStats(modelChecker: ModelChecker<N, C>, smt: Boolean) {
     modelChecker.timeInGenerator = 0
     modelChecker.verificationTime = 0
+    modelChecker.queueStats.clear()
 
     if (smt) {
         timeInSimplify = 0
@@ -73,6 +74,9 @@ fun <N: Node, C: Colors<C>> printStats(logger: Logger, modelChecker: ModelChecke
     fun Long.toMillis() = (this / (1000 * 1000))
     logger.info("Time in generator: ${modelChecker.timeInGenerator.toMillis()}ms")
     logger.info("Verification time: ${modelChecker.verificationTime.toMillis()}ms")
+    for ((name, value) in modelChecker.queueStats) {
+        logger.info("$name: $value")
+    }
     if (smt) {  //don't load z3 if not needed
         logger.info("Time in simplify: ${timeInSimplify.toMillis()}ms")
         logger.info("Time in solver: ${timeInSolver.toMillis()}ms")

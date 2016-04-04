@@ -41,7 +41,8 @@ fun loadModel(
         logger: Logger
 ): Model {
     //copy model file into task folder
-    /*val dest = File(taskRoot, config.file.name)
+    /*TODO Stale file handle on pheme
+    val dest = File(taskRoot, config.file.name)
     if (!dest.exists()) {
         config.file.copyTo(dest, overwrite = true)
     }*/
