@@ -126,7 +126,7 @@ fun guardedRemoteProcess(
     val command = "cd ${System.getProperty("user.dir")}; " +    //move to the right directory
             (vars?.map { " export $it; " }?.joinToString(separator = " ") ?: "") + //add environmental variables
             args.map { "\"$it\"" }.joinToString(separator = " ")    //escape arguments
-    println("Execute command: $command")
+    //println("Execute command: $command")
     val sshProcess = Runtime.getRuntime().exec(arrayOf("ssh", host, command))
     val timeoutThread = if (timeout > 0) {
         thread {
