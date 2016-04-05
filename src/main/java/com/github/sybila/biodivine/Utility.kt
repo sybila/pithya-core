@@ -9,6 +9,7 @@ import com.github.sybila.ode.generator.smt.*
 import com.github.sybila.ode.model.Model
 import com.microsoft.z3.Tactic
 import java.io.*
+import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
@@ -157,7 +158,7 @@ fun <C: Colors<C>> processResults(
                     rString.add("$id Solver used x-times: ${solverCalls + solverCallsInOrdering}")
                     rString.add("$id Time in solver: ${(timeInSolver + timeInOrdering).toMillis()}ms")
                 }
-                Files.write(Paths.get(file.toURI()), rString, StandardOpenOption.APPEND)
+                Files.write(Paths.get(file.toURI()), rString, Charset.defaultCharset(), StandardOpenOption.APPEND)
             }
             else -> error("Unknown print type: $printType")
         }
