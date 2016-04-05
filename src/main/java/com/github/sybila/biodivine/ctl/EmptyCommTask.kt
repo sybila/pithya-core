@@ -2,9 +2,7 @@ package com.github.sybila.biodivine.ctl
 
 import com.github.daemontus.jafra.Terminator
 import com.github.daemontus.jafra.Token
-import com.github.sybila.biodivine.rootPackage
-import com.github.sybila.biodivine.toLogLevel
-import com.github.sybila.biodivine.toYamlMap
+import com.github.sybila.biodivine.*
 import com.github.sybila.checker.*
 import com.github.sybila.ctl.CTLParser
 import com.github.sybila.ode.generator.NodeEncoder
@@ -72,9 +70,11 @@ fun main(args: Array<String>) {
                 val properties = yamlConfig.loadPropertyList()
                 for (i in properties.indices) {
                     val result = verify(properties[i], ctlParser, checker, logger)
-                    com.github.sybila.biodivine.processResults(
+                    processResults(
                             0, taskRoot, "query-$i", result,
-                            checker, nodeEncoder, model, properties[i].results, logger, fragment is SMTOdeFragment)
+                            checker, nodeEncoder, model, properties[i].results, logger,
+                            if (fragment is SMTOdeFragment) fragment.order else null)
+                    clearStats(checker, fragment is SMTOdeFragment)
                 }
             }
 

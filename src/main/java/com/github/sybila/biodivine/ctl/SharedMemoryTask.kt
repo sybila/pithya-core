@@ -21,6 +21,7 @@ import java.util.logging.SimpleFormatter
  * This is the main function which should execute a shared memory verification task.
  */
 fun main(args: Array<String>) {
+
     val consoleLogLevel = args[0].toLogLevel()
     val name = args[1]
     val taskRoot = File(args[2])
@@ -94,9 +95,12 @@ fun main(args: Array<String>) {
                         val properties = yamlConfig.loadPropertyList()
                         for (i in properties.indices) {
                             val result = verify(properties[i], ctlParser, checker, localLogger)
+                            val fragment = pair.second
                             processResults(
                                     id, taskRoot, "query-$i", result,
-                                    checker, nodeEncoder, model, properties[i].results, localLogger, pair.second is SMTOdeFragment)
+                                    checker, nodeEncoder, model, properties[i].results, localLogger,
+                                    if (fragment is SMTOdeFragment) fragment.order else null)
+                            clearStats(checker, fragment is SMTOdeFragment)
                         }
                     }
                 }.map {

@@ -26,8 +26,9 @@ import kotlin.system.exitProcess
  */
 fun main(args: Array<String>) {
     Thread.setDefaultUncaughtExceptionHandler({ thread, throwable ->
+        //TODO: This is not working. Why?
         throwable.printStackTrace()
-        println("Uncaught exception in $thread, exitting...")
+        println("Uncaught exception in $thread, exiting...")
         exitProcess(-1)
     })
     //println("Process started with args: ${Arrays.toString(args)}")
@@ -97,7 +98,9 @@ fun main(args: Array<String>) {
                     val result = verify(properties[i], ctlParser, checker, logger)
                     processResults(
                             id, taskRoot, "query-$i", result,
-                            checker, nodeEncoder, model, properties[i].results, logger, fragment is SMTOdeFragment)
+                            checker, nodeEncoder, model, properties[i].results, logger,
+                            if (fragment is SMTOdeFragment) fragment.order else null)
+                    clearStats(checker, fragment is SMTOdeFragment)
                 }
             }
 

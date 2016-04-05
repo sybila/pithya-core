@@ -62,6 +62,7 @@ class C {
             val size = "size"
             val stats = "stats"
             val human = "human"
+            val legacy = "legacy"
 
 
     val logLevel = "logLevel"

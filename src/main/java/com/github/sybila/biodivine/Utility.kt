@@ -7,12 +7,13 @@ import com.github.sybila.ode.generator.NodeEncoder
 import com.github.sybila.ode.generator.rect.RectangleColors
 import com.github.sybila.ode.generator.smt.*
 import com.github.sybila.ode.model.Model
-import java.io.File
-import java.io.PrintStream
+import com.microsoft.z3.Tactic
+import java.io.*
 import java.util.logging.Level
 import java.util.logging.Logger
 import kotlin.concurrent.thread
 
+val globalStart = System.nanoTime()
 
 fun String.trimExtension(): String {
     return this.substring(0, this.lastIndexOf("."))
@@ -53,6 +54,23 @@ fun IDNode.prettyPrint(model: Model, encoder: NodeEncoder): String {
     }.joinToString()+"{${this.id}}"
 }
 
+fun IDNode.legacyPrint(model: Model, encoder: NodeEncoder): String {
+    val coordinates = encoder.decodeNode(this)
+    return coordinates.mapIndexed { i, c ->
+        val t = model.variables[i].thresholds
+        "[${t[c]},${t[c+1]}]"
+    }.joinToString()
+}
+
+fun SMTColors.legacyPrint(order: PartialOrderSet, tactic: Tactic): String {
+    val formula = z3.mkAnd(this.cnf.asFormula(), *order.paramBounds)
+    val goal = z3.mkGoal(false, false, false)
+    goal.add(formula)
+    val goals = tactic.apply(goal).subgoals
+    assert(goals.size == 1)
+    return goals.first().AsBoolExpr().toString()
+}
+
 fun <N: Node, C: Colors<C>> clearStats(modelChecker: ModelChecker<N, C>, smt: Boolean) {
     modelChecker.timeInGenerator = 0
     modelChecker.verificationTime = 0
@@ -70,8 +88,9 @@ fun <N: Node, C: Colors<C>> clearStats(modelChecker: ModelChecker<N, C>, smt: Bo
     }
 }
 
+fun Long.toMillis() = (this / (1000 * 1000))
+
 fun <N: Node, C: Colors<C>> printStats(logger: Logger, modelChecker: ModelChecker<N, C>, smt: Boolean) {
-    fun Long.toMillis() = (this / (1000 * 1000))
     logger.info("Time in generator: ${modelChecker.timeInGenerator.toMillis()}ms")
     logger.info("Verification time: ${modelChecker.verificationTime.toMillis()}ms")
     for ((name, value) in modelChecker.queueStats) {
@@ -85,7 +104,6 @@ fun <N: Node, C: Colors<C>> printStats(logger: Logger, modelChecker: ModelChecke
         logger.info("Simplify cache hit: $simplifyCacheHit/$simplifyCalls")
         logger.info("Solver cache hit: $solverCacheHit vs. $solverCalls")
     }
-    clearStats(modelChecker, smt)
 }
 
 fun <C: Colors<C>> processResults(
@@ -98,18 +116,40 @@ fun <C: Colors<C>> processResults(
         model: Model,
         printConfig: Set<String>,
         logger: Logger,
-        smt: Boolean
+        orderSet: PartialOrderSet?
 ) {
     for (printType in printConfig) {
         when (printType) {
             c.size -> logger.info("Results size: ${results.entries.count()}")
             c.stats -> {
-                printStats(logger, checker, smt)
+                printStats(logger, checker, orderSet != null)
             }
             c.human -> {
                 File(taskRoot, "$queryName.human.$id.txt").bufferedWriter().use {
                     for (entry in results.entries) {
                         it.write("${entry.key.prettyPrint(model, encoder)} - ${entry.value}\n")
+                    }
+                }
+            }
+            c.legacy -> {
+                val file = File(taskRoot, "$queryName.legacy.txt")
+                //appending writer
+                val writer = PrintWriter(BufferedWriter(FileWriter(file, true)))
+                writer.use {
+                    var simplify: Tactic? = null
+                    for ((node, colors) in results.entries) {
+                        if (colors is SMTColors) {
+                            //stay lazy!
+                            if (simplify == null) simplify = z3.mkTactic("ctx-solver-simplify")
+                            it.write("${node.legacyPrint(model, encoder)} ${colors.legacyPrint(orderSet!!, simplify!!)}\n")
+                        } else {
+                            it.write("${node.legacyPrint(model, encoder)} $colors\n")
+                        }
+                    }
+                    it.write("$id Total duration: ${(System.nanoTime() - globalStart).toMillis()}ms\n")
+                    if (simplify != null) {
+                        it.write("$id Solver used x-times: ${solverCalls + solverCallsInOrdering}\n")
+                        it.write("$id Time in solver: ${(timeInSolver + timeInOrdering).toMillis()}ms\n")
                     }
                 }
             }
