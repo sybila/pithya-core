@@ -9,6 +9,9 @@ import com.github.sybila.ode.generator.smt.*
 import com.github.sybila.ode.model.Model
 import com.microsoft.z3.Tactic
 import java.io.*
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.nio.file.StandardOpenOption
 import java.util.logging.Level
 import java.util.logging.Logger
 import kotlin.concurrent.thread
@@ -133,25 +136,28 @@ fun <C: Colors<C>> processResults(
             }
             c.legacy -> {
                 val file = File(taskRoot, "$queryName.legacy.txt")
-                //appending writer
-                val writer = PrintWriter(BufferedWriter(FileWriter(file, true)))
-                writer.use {
-                    var simplify: Tactic? = null
-                    for ((node, colors) in results.entries) {
-                        if (colors is SMTColors) {
-                            //stay lazy!
-                            if (simplify == null) simplify = z3.mkTactic("ctx-solver-simplify")
-                            it.write("${node.legacyPrint(model, encoder)} ${colors.legacyPrint(orderSet!!, simplify!!)}\n")
-                        } else {
-                            it.write("${node.legacyPrint(model, encoder)} $colors\n")
-                        }
-                    }
-                    it.write("$id Total duration: ${(System.nanoTime() - globalStart).toMillis()}ms\n")
-                    if (simplify != null) {
-                        it.write("$id Solver used x-times: ${solverCalls + solverCallsInOrdering}\n")
-                        it.write("$id Time in solver: ${(timeInSolver + timeInOrdering).toMillis()}ms\n")
-                    }
+                if (!file.exists()) {
+                    try {
+                        file.createNewFile()
+                    } catch (e: Exception) {} //Ok
                 }
+                var simplify: Tactic? = null
+                val rString = results.entries.map {
+                    val (node, colors) = it
+                    if (colors is SMTColors) {
+                        //stay lazy!
+                        if (simplify == null) simplify = z3.mkTactic("ctx-solver-simplify")
+                        "${node.legacyPrint(model, encoder)} ${colors.legacyPrint(orderSet!!, simplify!!)}"
+                    } else {
+                        "${node.legacyPrint(model, encoder)} $colors"
+                    }
+                }.toMutableList()
+                rString.add("$id Total duration: ${(System.nanoTime() - globalStart).toMillis()}ms")
+                if (simplify != null) {
+                    rString.add("$id Solver used x-times: ${solverCalls + solverCallsInOrdering}")
+                    rString.add("$id Time in solver: ${(timeInSolver + timeInOrdering).toMillis()}ms")
+                }
+                Files.write(Paths.get(file.toURI()), rString, StandardOpenOption.APPEND)
             }
             else -> error("Unknown print type: $printType")
         }
