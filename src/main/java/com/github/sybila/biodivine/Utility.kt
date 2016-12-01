@@ -66,21 +66,12 @@ fun IDNode.legacyPrint(model: Model, encoder: NodeEncoder): String {
     }.joinToString()
 }
 
-fun SMTColors.legacyPrint(order: PartialOrderSet, tactic: Tactic): String {
-    val formula = z3.mkAnd(this.cnf.asFormula(), *order.paramBounds)
-    val goal = z3.mkGoal(false, false, false)
-    goal.add(formula)
-    val goals = tactic.apply(goal).subgoals
-    assert(goals.size == 1)
-    return goals.first().AsBoolExpr().toString()
-}
-
 fun <N: Node, C: Colors<C>> clearStats(modelChecker: ModelChecker<N, C>, smt: Boolean) {
     modelChecker.timeInGenerator = 0
     modelChecker.verificationTime = 0
     modelChecker.queueStats.clear()
 
-    if (smt) {
+    /*if (smt) {
         timeInSimplify = 0
         simplifyCacheHit = 0
         simplifyCalls = 0
@@ -89,25 +80,25 @@ fun <N: Node, C: Colors<C>> clearStats(modelChecker: ModelChecker<N, C>, smt: Bo
         solverCacheHit = 0
         timeInOrdering = 0
         solverCallsInOrdering = 0
-    }
+    }*/
 }
 
 fun Long.toMillis() = (this / (1000 * 1000))
 
-fun <N: Node, C: Colors<C>> printStats(logger: Logger, modelChecker: ModelChecker<N, C>, smt: Boolean) {
+fun <N: Node, C: Colors<C>> printStats(logger: Logger, modelChecker: ModelChecker<N, C>) {
     logger.info("Time in generator: ${modelChecker.timeInGenerator.toMillis()}ms")
     logger.info("Verification time: ${modelChecker.verificationTime.toMillis()}ms")
     for ((name, value) in modelChecker.queueStats) {
         logger.info("$name: $value")
     }
-    if (smt) {  //don't load z3 if not needed
+    /*if (smt) {  //don't load z3 if not needed
         logger.info("Time in simplify: ${timeInSimplify.toMillis()}ms")
         logger.info("Time in solver: ${timeInSolver.toMillis()}ms")
         logger.info("Time in ordering: ${timeInOrdering.toMillis()}ms")
         logger.info("Solver calls in ordering: ${solverCallsInOrdering}")
         logger.info("Simplify cache hit: $simplifyCacheHit/$simplifyCalls")
         logger.info("Solver cache hit: $solverCacheHit vs. $solverCalls")
-    }
+    }*/
 }
 
 fun <C: Colors<C>> processResults(
@@ -119,19 +110,18 @@ fun <C: Colors<C>> processResults(
         encoder: NodeEncoder,
         model: Model,
         printConfig: Set<String>,
-        logger: Logger,
-        orderSet: PartialOrderSet?
+        logger: Logger
 ) {
     for (printType in printConfig) {
         when (printType) {
             c.size -> logger.info("Results size: ${results.entries.count()}")
             c.stats -> {
-                printStats(logger, checker, orderSet != null)
+                printStats(logger, checker)
             }
             c.human -> {
                 File(taskRoot, "$queryName.human.$id.txt").bufferedWriter().use {
-                    for (entry in results.entries) {
-                        it.write("${entry.key.prettyPrint(model, encoder)} - ${entry.value}\n")
+                    for ((key, value) in results.entries) {
+                        it.write("${key.prettyPrint(model, encoder)} - ${value}\n")
                     }
                 }
             }
@@ -148,15 +138,15 @@ fun <C: Colors<C>> processResults(
                     if (colors is SMTColors) {
                         //stay lazy!
                         if (simplify == null) simplify = z3.mkTactic("ctx-solver-simplify")
-                        "${node.legacyPrint(model, encoder)} ${colors.legacyPrint(orderSet!!, simplify!!)}"
+                        "${node.legacyPrint(model, encoder)} ${simplify!!}"
                     } else {
                         "${node.legacyPrint(model, encoder)} $colors"
                     }
                 }.toMutableList()
                 rString.add("$id Total duration: ${(System.nanoTime() - globalStart).toMillis()}ms")
                 if (simplify != null) {
-                    rString.add("$id Solver used x-times: ${solverCalls + solverCallsInOrdering}")
-                    rString.add("$id Time in solver: ${(timeInSolver + timeInOrdering).toMillis()}ms")
+                    //rString.add("$id Solver used x-times: ${solverCalls + solverCallsInOrdering}")
+                    //rString.add("$id Time in solver: ${(timeInSolver + timeInOrdering).toMillis()}ms")
                 }
                 Files.write(Paths.get(file.toURI()), rString, Charset.defaultCharset(), StandardOpenOption.APPEND)
             }

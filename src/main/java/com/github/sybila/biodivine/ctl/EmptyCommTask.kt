@@ -72,8 +72,7 @@ fun main(args: Array<String>) {
                     val result = verify(properties[i], ctlParser, checker, logger)
                     processResults(
                             0, taskRoot, "query-$i", result,
-                            checker, nodeEncoder, model, properties[i].results, logger,
-                            if (fragment is SMTOdeFragment) fragment.order else null)
+                            checker, nodeEncoder, model, properties[i].results, logger)
                     clearStats(checker, fragment is SMTOdeFragment)
                 }
             }

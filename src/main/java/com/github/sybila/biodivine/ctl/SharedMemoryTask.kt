@@ -98,8 +98,7 @@ fun main(args: Array<String>) {
                             val fragment = pair.second
                             processResults(
                                     id, taskRoot, "query-$i", result,
-                                    checker, nodeEncoder, model, properties[i].results, localLogger,
-                                    if (fragment is SMTOdeFragment) fragment.order else null)
+                                    checker, nodeEncoder, model, properties[i].results, localLogger)
                             clearStats(checker, fragment is SMTOdeFragment)
                         }
                     }

@@ -11,11 +11,9 @@ import com.github.sybila.ode.generator.partitioning.HashPartitioning
 import com.github.sybila.ode.generator.partitioning.SlicePartitioning
 import com.github.sybila.ode.generator.rect.RectangleMPJCommunicator
 import com.github.sybila.ode.generator.rect.RectangleOdeFragment
-import com.github.sybila.ode.generator.smt.SMTMPJCommunicator
 import com.github.sybila.ode.generator.smt.SMTOdeFragment
 import mpi.MPI
 import java.io.File
-import java.util.*
 import java.util.logging.FileHandler
 import java.util.logging.Logger
 import java.util.logging.SimpleFormatter
@@ -98,8 +96,7 @@ fun main(args: Array<String>) {
                     val result = verify(properties[i], ctlParser, checker, logger)
                     processResults(
                             id, taskRoot, "query-$i", result,
-                            checker, nodeEncoder, model, properties[i].results, logger,
-                            if (fragment is SMTOdeFragment) fragment.order else null)
+                            checker, nodeEncoder, model, properties[i].results, logger)
                     clearStats(checker, fragment is SMTOdeFragment)
                 }
             }
@@ -119,7 +116,7 @@ fun main(args: Array<String>) {
                     comm.close()
                     logger.info("Comm closed")
                 }
-                is SMTColorsConfig -> {
+                /*is SMTColorsConfig -> {
                     val fragment = SMTOdeFragment(model, partition)
                     val token = CommunicatorTokenMessenger(id, workerCount)
                     val comm = SMTMPJCommunicator(
@@ -133,7 +130,7 @@ fun main(args: Array<String>) {
                     logger.info("Tokens closed")
                     comm.close()
                     logger.info("Comm closed")
-                }
+                }*/
                 else -> throw IllegalArgumentException("Unsupported colors ${config.colors}")
             }
         }
