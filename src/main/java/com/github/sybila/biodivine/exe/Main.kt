@@ -31,7 +31,8 @@ fun main(args: Array<String>) {
     try {
         if (args.isEmpty()) throw IllegalArgumentException("Missing argument: .json config file")
         val pid = ManagementFactory.getRuntimeMXBean().name.takeWhile { it != '@' }
-        System.err.println(pid)
+        System.err.println("PID: $pid")
+        System.err.flush()
         val file = File(args[0]).readText()
         val builder = GsonBuilder()
 
@@ -92,6 +93,7 @@ fun main(args: Array<String>) {
             printRectResults(results, model)
         } else {
             val f = SMTOdeFragment(model, partition, true)
+            println("Full: ${f.fullColors.prettyFormula().toR()}")
             val q = createMergeQueues<IDNode, SMTColors>(1, listOf(partition),
                     listOf(comm), listOf(terminator), logger
             ).first()
@@ -249,8 +251,8 @@ private fun Expr.toR(): String {
         this.isNot -> "(!${this.args[0].toR()})"
         this.isTrue -> "TRUE"
         this.isFalse -> "FALSE"
+        this.isConst -> "\$ip$this"
         this.isInt || this.isReal -> this.toString()
-        this.isVar -> "ip$this"
         else -> throw IllegalStateException("Unsupported formula: $this")
     }
 }
