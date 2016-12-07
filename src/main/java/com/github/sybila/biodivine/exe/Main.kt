@@ -18,6 +18,7 @@ import com.github.sybila.ode.model.RampApproximation
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.InstanceCreator
+import com.google.gson.annotations.SerializedName
 import com.microsoft.z3.Expr
 import java.io.File
 import java.lang.management.ManagementFactory
@@ -144,7 +145,8 @@ private fun printRectResults(result: List<Pair<String, Nodes<IDNode, RectangleCo
             results = map,
             parameterValues = params.map {
                 it.asRectangleList().map { it.asIntervals() }
-            }
+            },
+            parameterBounds = model.parameters.map { listOf(it.range.first, it.range.second) }
     )
     val gson = Gson()
     println(gson.toJson(r))
@@ -186,7 +188,8 @@ private fun printSMTResults(result: List<Pair<String, Nodes<IDNode, SMTColors>>>
                         smtlib2Formula = f.toString(),
                         Rexpression = f.toR()
                 )
-            }
+            },
+            parameterBounds = model.parameters.map { listOf(it.range.first, it.range.second) }
     )
     val gson = Gson()
     println(gson.toJson(r))
@@ -205,7 +208,10 @@ private class ResultSet(
         val thresholds: List<List<Double>>,
         val states: List<State>,
         val type: String,
+        @SerializedName("parameter_values")
         val parameterValues: List<Any>,
+        @SerializedName("parameter_bounds")
+        val parameterBounds: List<List<Double>>,
         val results: List<Result>
 )
 
