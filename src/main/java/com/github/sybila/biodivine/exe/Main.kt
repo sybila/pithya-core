@@ -93,7 +93,6 @@ fun main(args: Array<String>) {
             printRectResults(results, model)
         } else {
             val f = SMTOdeFragment(model, partition, true)
-            println("Full: ${f.fullColors.prettyFormula().toR()}")
             val q = createMergeQueues<IDNode, SMTColors>(1, listOf(partition),
                     listOf(comm), listOf(terminator), logger
             ).first()
@@ -251,7 +250,7 @@ private fun Expr.toR(): String {
         this.isNot -> "(!${this.args[0].toR()})"
         this.isTrue -> "TRUE"
         this.isFalse -> "FALSE"
-        this.isConst -> "\$ip$this"
+        this.isConst -> "ip\$$this"
         this.isInt || this.isReal -> this.toString()
         else -> throw IllegalStateException("Unsupported formula: $this")
     }
