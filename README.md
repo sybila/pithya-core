@@ -9,13 +9,21 @@ BioDivine is a tool for distributed or parallel model checking of biological mod
 This repository should provide a frontend interface for running experiments using BioDivine engines and
 states space generators. It's currently under construction with a beta release coming soon.
 
+### How to build
+
+Make sure you have Z3 prover installed and included in your path.
+
+Clone the repository and run ./gradlew installDist (or ./gradlew.bat installDist on Windows). Biodivine installation will be created in build/install/biodivine-ctl. You can then move this folder to your desired location.
+
 ### How to use
 
-BioDivine CTL is available as a jar file [here](https://github.com/sybila/biodivine-ctl/releases/download/0.1.1/ctl-biodivine-0.1.1-all.jar). It should work on Windows, however testing is performed only on Linux and OS X at the moment.
+Biodivine installation contains bin folder with three executables:
 
-The jar file takes one argument which is a configuration file. Example of configuration file can be found [here](https://github.com/sybila/biodivine-ctl/blob/master/config.yaml). (Any property that has a default value can be left out). 
+tractor - takes one argument with a path to a .bio model and prints a piece-wise multi affine abstraction of this model on stdout.
 
-BioDivine will create a separate folder to which it will write all results and information about the execution.
+combine - takes two arguments: piece-wise multi affine model and .ctl property file and prints a json configuration file to stdout.
+
+biodivine-ctl - main binary, takse the json config file as command line argument and prints result json.
 
 ### Project status
 
