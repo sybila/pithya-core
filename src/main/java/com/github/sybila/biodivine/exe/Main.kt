@@ -18,6 +18,7 @@ import com.github.sybila.ode.model.RampApproximation
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.InstanceCreator
+import com.google.gson.annotations.SerializedName
 import com.microsoft.z3.Expr
 import java.io.File
 import java.lang.management.ManagementFactory
@@ -111,7 +112,8 @@ private fun printRectResults(model: OdeModel, result: Map<String, List<StateMap<
             results = map,
             parameterValues = params.map {
                 it.map { it.asIntervals() }
-            }
+            },
+            parameterBounds = model.parameters.map { listOf(it.range.first, it.range.second) }
     )
     val gson = Gson()
     println(gson.toJson(r))
@@ -152,7 +154,8 @@ private fun Z3OdeFragment.printSMTResults(model: OdeModel, result: Map<String, S
                         smtlib2Formula = it.formula.toString(),
                         Rexpression = it.formula.toR()
                 )
-            }
+            },
+            parameterBounds = model.parameters.map { listOf(it.range.first, it.range.second) }
     )
     val printer = Gson()
     println(printer.toJson(r))
@@ -171,7 +174,10 @@ private class ResultSet(
         val thresholds: List<List<Double>>,
         val states: List<State>,
         val type: String,
+        @SerializedName("parameter_values")
         val parameterValues: List<Any>,
+        @SerializedName("parameter_bounds")
+        val parameterBounds: List<List<Double>>,
         val results: List<Result>
 )
 
@@ -216,7 +222,7 @@ private fun Expr.toR(): String {
         this.isNot -> "(!${this.args[0].toR()})"
         this.isTrue -> "TRUE"
         this.isFalse -> "FALSE"
-        this.isConst -> "\$ip$this"
+        this.isConst -> "ip\$$this"
         this.isInt || this.isReal -> this.toString()
         else -> throw IllegalStateException("Unsupported formula: $this")
     }
