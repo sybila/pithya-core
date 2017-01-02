@@ -1,10 +1,6 @@
 package com.github.sybila.biodivine
 
-import java.io.File
-import java.util.logging.Level
-import java.util.logging.Logger
-
-
+/*
 val rootPackage = "com.github.sybila"
 
 /**
@@ -66,4 +62,4 @@ fun main(args: Array<String>) {
     }
 
     logger.info("$success/${tasks.size} tasks finished successfully. Exiting.")
-}
+}*/

@@ -1,23 +1,6 @@
 package com.github.sybila.biodivine.ctl
 
-import com.github.sybila.biodivine.CleanFormatter
-import com.github.sybila.biodivine.ConsoleHandler
-import com.github.sybila.biodivine.rootPackage
-import com.github.sybila.checker.Colors
-import com.github.sybila.checker.ModelChecker
-import com.github.sybila.checker.Node
-import com.github.sybila.checker.Nodes
-import com.github.sybila.ctl.CTLParser
-import com.github.sybila.ode.generator.NodeEncoder
-import com.github.sybila.ode.model.Model
-import com.github.sybila.ode.model.Parser
-import com.github.sybila.ode.model.computeApproximation
-import java.io.File
-import java.util.logging.FileHandler
-import java.util.logging.Level
-import java.util.logging.Logger
-import java.util.logging.SimpleFormatter
-
+/*
 fun getGlobalLogger(
         consoleLogLevel: Level,
         taskRoot: File,
@@ -91,3 +74,4 @@ fun <N: Node, C: Colors<C>> verify(property: PropertyConfig, parser: CTLParser, 
 
     return results
 }
+*/

@@ -1,7 +1,6 @@
 package com.github.sybila.biodivine.ctl
 
-import com.github.sybila.checker.Communicator
-
+/*
 class EmptyCommunicator : Communicator {
     override var receiveCount: Long = 0
     override var receiveSize: Long = 0
@@ -28,4 +27,4 @@ class EmptyCommunicator : Communicator {
         throw UnsupportedOperationException()
     }
 
-}
+}*/

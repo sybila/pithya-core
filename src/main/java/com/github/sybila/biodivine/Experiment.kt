@@ -1,16 +1,6 @@
 package com.github.sybila.biodivine
 
-import java.io.File
-import java.lang.management.ManagementFactory
-import java.net.InetAddress
-import java.net.UnknownHostException
-import java.text.SimpleDateFormat
-import java.util.*
-import java.util.logging.FileHandler
-import java.util.logging.Level
-import java.util.logging.Logger
-import java.util.logging.SimpleFormatter
-
+/*
 data class ExperimentConfig(
         val printBuildInfo: Boolean,
         val printEnvironmentInfo: Boolean,
@@ -116,4 +106,4 @@ private fun maxRAM(): String {
     } catch (e: Exception) {
         return "Not available"
     }
-}
+}*/

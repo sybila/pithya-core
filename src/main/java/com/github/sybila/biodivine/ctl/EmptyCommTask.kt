@@ -1,24 +1,10 @@
 package com.github.sybila.biodivine.ctl
 
-import com.github.daemontus.jafra.Terminator
-import com.github.daemontus.jafra.Token
-import com.github.sybila.biodivine.*
-import com.github.sybila.checker.*
-import com.github.sybila.ctl.CTLParser
-import com.github.sybila.ode.generator.NodeEncoder
-import com.github.sybila.ode.generator.partitioning.BlockPartitioning
-import com.github.sybila.ode.generator.partitioning.HashPartitioning
-import com.github.sybila.ode.generator.partitioning.SlicePartitioning
-import com.github.sybila.ode.generator.rect.RectangleOdeFragment
-import com.github.sybila.ode.generator.smt.SMTOdeFragment
-import java.io.File
-import java.util.logging.Logger
-
 /**
  * This is the main function which should execute a shared memory verification task.
  */
 fun main(args: Array<String>) {
-    val consoleLogLevel = args[0].toLogLevel()
+    /*val consoleLogLevel = args[0].toLogLevel()
     val name = args[1]
     val taskRoot = File(args[2])
     taskRoot.mkdirs()
@@ -90,10 +76,10 @@ fun main(args: Array<String>) {
             tokens.close()
             comm.close()
         }
-    }
+    }*/
 
 }
-
+/*
 fun <N: Node, C: Colors<C>> createSingleThreadJobQueues(
         processCount: Int,
         partitioning: List<PartitionFunction<N>> = (1..processCount).map { UniformPartitionFunction<N>(it - 1) },
@@ -124,4 +110,4 @@ fun <N: Node, C: Colors<C>> createMergeQueues(
             }
         }
     }
-}
+}*/

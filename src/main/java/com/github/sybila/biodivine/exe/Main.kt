@@ -1,18 +1,18 @@
 package com.github.sybila.biodivine.exe
 
-import com.github.daemontus.jafra.Terminator
-import com.github.daemontus.jafra.Token
-import com.github.sybila.biodivine.ctl.EmptyCommunicator
-import com.github.sybila.biodivine.ctl.createMergeQueues
-import com.github.sybila.checker.*
-import com.github.sybila.ctl.CTLParser
+import com.github.sybila.checker.Checker
+import com.github.sybila.checker.SequentialChecker
+import com.github.sybila.checker.StateMap
+import com.github.sybila.checker.channel.connectWithSharedMemory
+import com.github.sybila.checker.partition.asUniformPartitions
+import com.github.sybila.huctl.HUCTLParser
 import com.github.sybila.ode.generator.NodeEncoder
-import com.github.sybila.ode.generator.rect.RectangleColors
-import com.github.sybila.ode.generator.rect.RectangleOdeFragment
-import com.github.sybila.ode.generator.smt.SMTColors
-import com.github.sybila.ode.generator.smt.SMTOdeFragment
+import com.github.sybila.ode.generator.rect.Rectangle
+import com.github.sybila.ode.generator.rect.RectangleOdeModel
+import com.github.sybila.ode.generator.smt.Z3OdeFragment
+import com.github.sybila.ode.generator.smt.Z3Params
 import com.github.sybila.ode.model.Evaluable
-import com.github.sybila.ode.model.Model
+import com.github.sybila.ode.model.OdeModel
 import com.github.sybila.ode.model.Parser
 import com.github.sybila.ode.model.RampApproximation
 import com.google.gson.Gson
@@ -22,14 +22,11 @@ import com.microsoft.z3.Expr
 import java.io.File
 import java.lang.management.ManagementFactory
 import java.util.*
-import java.util.logging.Handler
-import java.util.logging.Level
-import java.util.logging.LogRecord
-import java.util.logging.Logger
 
 fun main(args: Array<String>) {
     try {
         if (args.isEmpty()) throw IllegalArgumentException("Missing argument: .json config file")
+        val cores = if (args.size > 1) args[1].toInt() else 1
         val pid = ManagementFactory.getRuntimeMXBean().name.takeWhile { it != '@' }
         System.err.println("PID: $pid")
         System.err.flush()
@@ -39,7 +36,8 @@ fun main(args: Array<String>) {
         builder.registerTypeAdapter(Evaluable::class.java, InstanceCreator<Evaluable> {
             RampApproximation(0, doubleArrayOf(), doubleArrayOf())  //no other evaluables are supported
         })
-        val parser = CTLParser()
+
+        val parser = HUCTLParser()
         val modelParser = Parser()
         val gson = builder.create()
         //val typeToken = object : TypeToken<Pair<Model, List<InputPair>>>() {}.type
@@ -47,63 +45,29 @@ fun main(args: Array<String>) {
 
 
         val model = modelParser.parse(data.first)
-        val formulas = data.second.map {
-            it.first to parser.formula(it.second)
-        }
+        val formulas = data.second.associateBy({it.first}, { parser.formula(it.second) })
         val isRectangular = model.variables.all {
             it.equation.map { it.paramIndex }.filter { it >= 0 }.toSet().size <= 1
         }
 
-        val logger = Logger.getLogger("main").apply {
-            this.level = Level.INFO
-            this.useParentHandlers = false
-            this.addHandler(object : Handler() {
-                override fun publish(record: LogRecord) {
-                    System.err.println(record.message)
-                }
-
-                override fun flush() {
-                    System.err.flush()
-                }
-
-                override fun close() {}
-
-            })
-        }
-
-        val partition = UniformPartitionFunction<IDNode>()
-
-        val comm = EmptyCommunicator()
-        val tokens = CommunicatorTokenMessenger(comm.id, comm.size)
-        tokens.comm = comm
-        comm.addListener(Token::class.java) { m -> tokens.invoke(m) }
-        val terminator = Terminator.Factory(tokens)
-
         if (isRectangular) {
-            val f = RectangleOdeFragment(model, partition, true)
-            val q = createMergeQueues<IDNode, RectangleColors>(1, listOf(partition),
-                listOf(comm), listOf(terminator), logger
-            ).first()
-            val checker = ModelChecker(f, q, logger)
-
-            val results = formulas.map {
-                it.first to checker.verify(it.second)
+            val models = (0 until cores).map { RectangleOdeModel(model) }.asUniformPartitions()
+            Checker(models.connectWithSharedMemory()).use { checker ->
+                System.err.println("Verification started...")
+                val r = checker.verify(formulas)
+                System.err.println("Verification finished. Printing results...")
+                printRectResults(model, r)
             }
-
-            printRectResults(results, model)
         } else {
-            val f = SMTOdeFragment(model, partition, true)
-            println("Full: ${f.fullColors.prettyFormula().toR()}")
-            val q = createMergeQueues<IDNode, SMTColors>(1, listOf(partition),
-                    listOf(comm), listOf(terminator), logger
-            ).first()
-            val checker = ModelChecker(f, q, logger)
-
-            val results = formulas.map {
-                it.first to checker.verify(it.second)
+            val fragment = Z3OdeFragment(model)
+            SequentialChecker(fragment).use { checker ->
+                fragment.run {
+                    System.err.println("Verification started...")
+                    val r = checker.verify(formulas)
+                    System.err.println("Verification finished. Printing results...")
+                    printSMTResults(model, r)
+                }
             }
-
-            printSMTResults(results, model)
         }
 
         System.err.println("!!DONE!!")
@@ -114,24 +78,26 @@ fun main(args: Array<String>) {
     }
 }
 
-private fun printRectResults(result: List<Pair<String, Nodes<IDNode, RectangleColors>>>, model: Model) {
-    val states = ArrayList<IDNode>()
-    val params = ArrayList<RectangleColors>()
+private fun printRectResults(model: OdeModel, result: Map<String, List<StateMap<Set<Rectangle>>>>) {
+    val states = ArrayList<Int>()
+    val params = ArrayList<Set<Rectangle>>()
     val map = ArrayList<Result>()
     for ((f, r) in result) {
         val rMap = ArrayList<List<Int>>()
-        for ((s, p) in r.entries) {
-            val ii = states.indexOf(s)
-            val i = if (ii < 0) {
-                states.add(s)
-                states.size - 1
-            } else ii
-            val jj = params.indexOf(p)
-            val j = if (jj < 0) {
-                params.add(p)
-                params.size - 1
-            } else jj
-            rMap.add(listOf(i, j))
+        for (partitionResult in r) {
+            for ((s, p) in partitionResult.entries()) {
+                val ii = states.indexOf(s)
+                val i = if (ii < 0) {
+                    states.add(s)
+                    states.size - 1
+                } else ii
+                val jj = params.indexOf(p)
+                val j = if (jj < 0) {
+                    params.add(p)
+                    params.size - 1
+                } else jj
+                rMap.add(listOf(i, j))
+            }
         }
         map.add(Result(f, rMap))
     }
@@ -144,28 +110,28 @@ private fun printRectResults(result: List<Pair<String, Nodes<IDNode, RectangleCo
             type = "rectangular",
             results = map,
             parameterValues = params.map {
-                it.asRectangleList().map { it.asIntervals() }
+                it.map { it.asIntervals() }
             }
     )
     val gson = Gson()
     println(gson.toJson(r))
 }
 
-private fun printSMTResults(result: List<Pair<String, Nodes<IDNode, SMTColors>>>, model: Model) {
-    val states = ArrayList<IDNode>()
-    val params = ArrayList<SMTColors>()
+private fun Z3OdeFragment.printSMTResults(model: OdeModel, result: Map<String, StateMap<Z3Params>>) {
+    val states = ArrayList<Int>()
+    val params = ArrayList<Z3Params>()
     val map = ArrayList<Result>()
     for ((f, r) in result) {
         val rMap = ArrayList<List<Int>>()
-        for ((s, pp) in r.entries) {
+        for ((s, p) in r.entries()) {
             val ii = states.indexOf(s)
             val i = if (ii < 0) {
                 states.add(s)
                 states.size - 1
             } else ii
-            val p = pp.normalize().purify()
             val jj = params.indexOf(p)
             val j = if (jj < 0) {
+                p.minimize()
                 params.add(p)
                 params.size - 1
             } else jj
@@ -182,19 +148,18 @@ private fun printSMTResults(result: List<Pair<String, Nodes<IDNode, SMTColors>>>
             type = "smt",
             results = map,
             parameterValues = params.map {
-                val f = it.prettyFormula()
                 SMTResult(
-                        smtlib2Formula = f.toString(),
-                        Rexpression = f.toR()
+                        smtlib2Formula = it.formula.toString(),
+                        Rexpression = it.formula.toR()
                 )
             }
     )
-    val gson = Gson()
-    println(gson.toJson(r))
+    val printer = Gson()
+    println(printer.toJson(r))
 }
 
-private fun IDNode.expand(model: Model, encoder:NodeEncoder): State {
-    return State(id = this.id.toLong(), bounds = model.variables.mapIndexed { i, variable ->
+private fun Int.expand(model: OdeModel, encoder:NodeEncoder): State {
+    return State(id = this.toLong(), bounds = model.variables.mapIndexed { i, variable ->
         val c = encoder.coordinate(this, i)
         listOf(variable.thresholds[c], variable.thresholds[c+1])
     })

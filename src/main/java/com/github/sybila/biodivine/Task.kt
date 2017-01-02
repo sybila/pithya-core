@@ -1,11 +1,6 @@
 package com.github.sybila.biodivine
 
-import com.github.daemontus.egholm.thread.guardedThread
-import com.github.sybila.biodivine.ctl.*
-import java.io.File
-import java.util.logging.Level
-import java.util.logging.Logger
-
+/*
 fun executeTask(config: YamlMap, name: String?, root: File, consoleLogLevel: Level): Boolean {
     val logger = Logger.getLogger(rootPackage)
     val taskRoot = if (name == null) root else File(root, name)
@@ -130,4 +125,4 @@ private fun createMPJConfigFile(root: File, config: MPJClusterCommunicatorConfig
         }
     }
     return configFile
-}
+}*/

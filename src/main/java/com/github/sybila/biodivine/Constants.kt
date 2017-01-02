@@ -1,5 +1,5 @@
 package com.github.sybila.biodivine
-
+/*
 /*
     Here you can define all the literals and names used in the config files
     so that you can use them safely in the code.
@@ -69,3 +69,4 @@ class C {
 
 }
 
+*/

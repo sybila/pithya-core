@@ -1,27 +1,10 @@
 package com.github.sybila.biodivine.ctl
 
-import com.github.daemontus.egholm.thread.guardedThread
-import com.github.daemontus.jafra.Token
-import com.github.sybila.biodivine.*
-import com.github.sybila.checker.*
-import com.github.sybila.ctl.CTLParser
-import com.github.sybila.ode.generator.NodeEncoder
-import com.github.sybila.ode.generator.partitioning.BlockPartitioning
-import com.github.sybila.ode.generator.partitioning.HashPartitioning
-import com.github.sybila.ode.generator.partitioning.SlicePartitioning
-import com.github.sybila.ode.generator.rect.RectangleOdeFragment
-import com.github.sybila.ode.generator.smt.SMTOdeFragment
-import java.io.File
-import java.util.concurrent.FutureTask
-import java.util.logging.FileHandler
-import java.util.logging.Logger
-import java.util.logging.SimpleFormatter
-
 /**
  * This is the main function which should execute a shared memory verification task.
  */
 fun main(args: Array<String>) {
-
+/*
     val consoleLogLevel = args[0].toLogLevel()
     val name = args[1]
     val taskRoot = File(args[2])
@@ -128,7 +111,7 @@ fun main(args: Array<String>) {
             comms.map { it.close() }
         }
     }
-
+*/
 }
 
 

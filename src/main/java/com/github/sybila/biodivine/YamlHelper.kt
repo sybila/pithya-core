@@ -1,9 +1,6 @@
 package com.github.sybila.biodivine
 
-import org.yaml.snakeyaml.Yaml
-import java.io.File
-import java.util.logging.Level
-
+/*
 fun File.toYamlMap(): YamlMap {
     return YamlMap(Yaml().load(this.inputStream()) as Map<*,*>)
 }
@@ -60,4 +57,4 @@ class YamlMap internal constructor(private val data: Map<*,*>) {
     override fun toString(): String {
         return Yaml().dump(this.data)
     }
-}
+}*/

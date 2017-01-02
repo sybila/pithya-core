@@ -1,10 +1,7 @@
 package com.github.sybila.biodivine.ctl
 
-import com.github.sybila.biodivine.YamlMap
-import com.github.sybila.biodivine.c
-import java.io.File
 
-
+/*
 data class PropertyConfig(
         val formula: String? = null,
         val verify: String? = null,
@@ -21,4 +18,4 @@ data class PropertyConfig(
 
 fun YamlMap.loadPropertyList(): List<PropertyConfig> {
     return this.getMapList(c.properties).map { PropertyConfig(it) }
-}
+}*/

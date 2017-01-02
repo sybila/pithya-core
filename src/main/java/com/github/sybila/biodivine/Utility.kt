@@ -1,22 +1,6 @@
 package com.github.sybila.biodivine
 
-import com.github.daemontus.egholm.logger.severeLoggers
-import com.github.daemontus.jafra.Terminator
-import com.github.sybila.checker.*
-import com.github.sybila.ode.generator.NodeEncoder
-import com.github.sybila.ode.generator.rect.RectangleColors
-import com.github.sybila.ode.generator.smt.*
-import com.github.sybila.ode.model.Model
-import com.microsoft.z3.Tactic
-import java.io.*
-import java.nio.charset.Charset
-import java.nio.file.Files
-import java.nio.file.Paths
-import java.nio.file.StandardOpenOption
-import java.util.logging.Level
-import java.util.logging.Logger
-import kotlin.concurrent.thread
-
+/*
 val globalStart = System.nanoTime()
 
 fun String.trimExtension(): String {
@@ -258,4 +242,4 @@ fun guardedProcess(args: Array<String>, vars: Array<String>?, logger: Logger, ti
     stdReader.join()
     errReader.join()
     return process.exitValue()
-}
+}*/

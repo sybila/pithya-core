@@ -1,13 +1,6 @@
 package com.github.sybila.biodivine.ctl
 
-import com.github.sybila.biodivine.YamlMap
-import com.github.sybila.biodivine.c
-import com.github.sybila.ctl.CTLParser
-import com.github.sybila.ctl.untilNormalForm
-import java.io.File
-import java.util.logging.Level
-import java.util.logging.Logger
-
+/*
 data class CTLParameterEstimationConfig(
         val maxMemory: Int,
         val timeout: Int,
@@ -250,3 +243,4 @@ interface ColorsConfig
 
 class RectangularColorsConfig() : ColorsConfig
 class SMTColorsConfig(): ColorsConfig
+        */

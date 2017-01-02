@@ -1,29 +1,10 @@
 package com.github.sybila.biodivine.ctl
 
-import com.github.daemontus.jafra.Terminator
-import com.github.sybila.biodivine.*
-import com.github.sybila.checker.*
-import com.github.sybila.ctl.CTLParser
-import com.github.sybila.ode.generator.MPJComm
-import com.github.sybila.ode.generator.NodeEncoder
-import com.github.sybila.ode.generator.partitioning.BlockPartitioning
-import com.github.sybila.ode.generator.partitioning.HashPartitioning
-import com.github.sybila.ode.generator.partitioning.SlicePartitioning
-import com.github.sybila.ode.generator.rect.RectangleMPJCommunicator
-import com.github.sybila.ode.generator.rect.RectangleOdeFragment
-import com.github.sybila.ode.generator.smt.SMTOdeFragment
-import mpi.MPI
-import java.io.File
-import java.util.logging.FileHandler
-import java.util.logging.Logger
-import java.util.logging.SimpleFormatter
-import kotlin.system.exitProcess
-
 /**
  * This is the main function which should execute a shared memory verification task.
  */
 fun main(args: Array<String>) {
-    Thread.setDefaultUncaughtExceptionHandler({ thread, throwable ->
+    /*Thread.setDefaultUncaughtExceptionHandler({ thread, throwable ->
         //TODO: This is not working. Why?
         throwable.printStackTrace()
         println("Uncaught exception in $thread, exiting...")
@@ -136,5 +117,5 @@ fun main(args: Array<String>) {
         }
     }
 
-    MPI.Finalize()
+    MPI.Finalize()*/
 }
