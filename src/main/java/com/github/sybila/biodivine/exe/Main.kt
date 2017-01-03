@@ -23,11 +23,19 @@ import com.google.gson.GsonBuilder
 import com.google.gson.InstanceCreator
 import com.google.gson.annotations.SerializedName
 import com.microsoft.z3.Expr
+import cz.adamh.utils.NativeUtils
 import java.io.File
 import java.lang.management.ManagementFactory
 import java.util.*
 
 fun main(args: Array<String>) {
+    println(System.getProperty("java.library.path"))
+    println(System.getProperty("user.dir"))
+    println(System.getenv())
+    val path = System.getProperty("java.library.path")
+    System.setProperty("user.dir", path)
+    //System.load(path+"/libz3.dylib")
+    //System.load(path+"/libz3java.dylib")
     try {
         if (args.isEmpty()) throw IllegalArgumentException("Missing argument: .json config file")
         val cores = if (args.size > 1) args[1].toInt() else 1

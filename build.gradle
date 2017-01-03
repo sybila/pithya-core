@@ -17,6 +17,7 @@ buildscript {
 plugins {
     id 'com.madvay.tools.build.gitbuildinfo' version '0.1.5-alpha'
     id 'com.github.johnrengelman.shadow' version '1.2.3'
+    id "de.undercouch.download" version "3.1.2"
 }
 
 apply plugin: 'idea'
@@ -124,6 +125,18 @@ tasks.withType(Test) {
 
 // bundle settings
 mainClassName = "com.github.sybila.biodivine.exe.MainKt"
+applicationDefaultJvmArgs = ["-Djava.library.path=MY_APP_HOME/lib"]
+
+startScripts {
+    doLast {
+        unixScript.text = unixScript.text.replace('MY_APP_HOME', '\$APP_HOME')
+        windowsScript.text = windowsScript.text.replace('MY_APP_HOME', '%~dp0..')
+    }
+}
+
+task createStartScripts(type: CreateStartScripts) {
+    defaultJvmOpts = ['-Djava.library.path $APP_HOME/lib']
+}
 
 task abstractionScript(type: CreateStartScripts) {
     mainClassName = "com.github.sybila.biodivine.exe.AbstractionKt"
@@ -148,3 +161,29 @@ applicationDistribution.into("bin") {
     from(combineScript)
     fileMode = 0755
 }
+
+import de.undercouch.gradle.tasks.download.Download
+
+ext.distributionOs = null
+
+task downloadZ3(type: Download) {
+    src 'https://github.com/Z3Prover/z3/releases/download/z3-4.5.0/z3-4.5.0-x64-osx-10.11.6.zip'
+    dest "$buildDir/z3archives/z3-osx.zip"
+    onlyIfNewer true
+}
+
+task unzipZ3(type: Copy) {
+    def zipFile = file("$buildDir/z3archives/z3-osx.zip")
+    def outFile = file("$buildDir/z3binaries/z3-osx")
+    from zipTree(zipFile)
+    into outFile
+}
+
+applicationDistribution.into("lib") {
+    from("$buildDir/z3binaries/z3-osx/z3-4.5.0-x64-osx-10.11.6/bin/libz3.dylib")
+    from("$buildDir/z3binaries/z3-osx/z3-4.5.0-x64-osx-10.11.6/bin/libz3java.dylib")
+    from("$buildDir/z3binaries/z3-osx/z3-4.5.0-x64-osx-10.11.6/bin/com.microsoft.z3.jar")
+}
+
+unzipZ3.dependsOn downloadZ3
+
