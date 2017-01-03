@@ -5,7 +5,10 @@ import com.github.sybila.checker.SequentialChecker
 import com.github.sybila.checker.StateMap
 import com.github.sybila.checker.channel.connectWithSharedMemory
 import com.github.sybila.checker.partition.asUniformPartitions
+import com.github.sybila.huctl.Expression
+import com.github.sybila.huctl.Formula
 import com.github.sybila.huctl.HUCTLParser
+import com.github.sybila.huctl.fold
 import com.github.sybila.ode.generator.NodeEncoder
 import com.github.sybila.ode.generator.rect.Rectangle
 import com.github.sybila.ode.generator.rect.RectangleOdeModel
@@ -47,6 +50,14 @@ fun main(args: Array<String>) {
 
         val model = modelParser.parse(data.first)
         val formulas = data.second.associateBy({it.first}, { parser.formula(it.second) })
+
+        //check missing thresholds
+        val thresholdError = checkMissingThresholds(formulas.values.toList(), model)
+        if (thresholdError != null) {
+            System.err.println(thresholdError)
+            return
+        }
+
         val isRectangular = model.variables.all {
             it.equation.map { it.paramIndex }.filter { it >= 0 }.toSet().size <= 1
         }
@@ -226,4 +237,50 @@ private fun Expr.toR(): String {
         this.isInt || this.isReal -> this.toString()
         else -> throw IllegalStateException("Unsupported formula: $this")
     }
+}
+
+private fun Formula.invalidThresholds(model: OdeModel): Map<String, Set<Double>> {
+    return this.fold<List<Pair<String, Double>>>({
+        if (this is Formula.Atom.Float) {
+            val left = this.left
+            val right = this.right
+            val (name, value) = if (left is Expression.Constant && right is Expression.Variable) {
+                right.name to left.value
+            } else if (left is Expression.Variable && right is Expression.Constant) {
+                left.name to right.value
+            } else throw IllegalArgumentException("Unsupported proposition type: $this")
+            val thresholds = model.variables.find { it.name == name }?.thresholds
+                ?: throw IllegalArgumentException("Unknown variable: $name")
+            val threshold = thresholds.find { it == value }
+            if (threshold != null) listOf() else listOf(name to value)
+        } else listOf()
+    }, { it }, { a, b -> a + b })
+            .groupBy { it.first }
+            .mapValues { it.value.map { it.second }.toSet() }
+}
+
+private fun <K, V> Map<K, V>.mergeReduce(other: Map<K, V>, reduce: (V, V) -> V = { a, b -> b }): Map<K, V> {
+    val result = LinkedHashMap<K, V>(this.size + other.size)
+    result.putAll(this)
+    other.forEach { e ->
+        val existing = result[e.key]
+
+        if (existing == null) {
+            result[e.key] = e.value
+        } else {
+            result[e.key] = reduce(e.value, existing)
+        }
+    }
+
+    return result
+}
+
+fun checkMissingThresholds(formulas: List<Formula>, model: OdeModel): String? {
+    val missing = formulas.map { it.invalidThresholds(model) }.fold(mapOf<String, Set<Double>>()) { acc, map ->
+        acc.mergeReduce(map) { a, b -> a + b }
+    }
+    return if (missing.isNotEmpty()) {
+        //report missing thresholds
+        "Missing thresholds: " + missing.entries.map { "${it.key}: ${it.value.joinToString()}" }.joinToString(separator = "; ")
+    } else null
 }

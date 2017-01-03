@@ -12,13 +12,21 @@ fun main(args: Array<String>) {
         if (args.size < 2) throw IllegalArgumentException("Missing argument: .ctl file")
         val propertyFile = File(args[1])
         val modelFile = File(args[0])
-        val formulas = HUCTLParser().parse(propertyFile, onlyFlagged = true).entries
+        val formulas = HUCTLParser().parse(propertyFile, onlyFlagged = true)
+        val formulaString = formulas.entries
                 .map { it.key to it.value.toString() }
 
         val model = Parser().parse(modelFile)
 
+        //check missing thresholds
+        val thresholdError = checkMissingThresholds(formulas.values.toList(), model)
+        if (thresholdError != null) {
+            System.err.println(thresholdError)
+            return
+        }
+
         val json = Gson()
-        println(json.toJson(model.toBio() to formulas))
+        println(json.toJson(model.toBio() to formulaString))
     } catch (e: Exception) {
         System.err.println("${e.message} (${e.javaClass.name})")
     }
