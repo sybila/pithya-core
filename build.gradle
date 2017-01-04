@@ -50,12 +50,12 @@ dependencies {
     compile 'org.yaml:snakeyaml:1.17'
     compile 'com.google.code.gson:gson:2.6.2'
     //ODE and CTL modules do not propagate this dependency, because it's part of the plugin
-    compile 'org.antlr:antlr4-runtime:4.5.2-1'
+    compile 'org.antlr:antlr4-runtime:4.6'
     //BioDivine modules. We list all, since that will override possible old version in transitive dependencies
-    compile 'com.github.sybila:ode-generator:1.0.2'
+    compile 'com.github.sybila:ode-generator:1.0.4'
     compile 'com.github.sybila:ctl-model-checker:2.0.0'
     compile 'com.github.daemontus:jafra:1.0.8'
-    compile 'com.github.sybila:ctl-parser:2.2.0'
+    compile 'com.github.sybila:ctl-parser:2.2.1'
     compile files('libs/mpj.jar')
     compile files('libs/com.microsoft.z3.jar')
 }
