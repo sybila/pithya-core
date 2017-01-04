@@ -220,8 +220,8 @@ private class MainPair(
 private fun Expr.toR(): String {
     return when {
         //boolean
-        this.isAnd -> "(" + this.args.map(Expr::toR).joinToString(separator = " && ") + ")"
-        this.isOr -> "(" + this.args.map(Expr::toR).joinToString(separator = " || ") + ")"
+        this.isAnd -> "(" + this.args.map(Expr::toR).joinToString(separator = " & ") + ")"
+        this.isOr -> "(" + this.args.map(Expr::toR).joinToString(separator = " | ") + ")"
         this.isAdd -> "("+ this.args.map(Expr::toR).joinToString(separator = " + ")+")"
         this.isSub -> "("+ this.args.map(Expr::toR).joinToString(separator = " - ")+")"
         this.isMul -> "("+ this.args.map(Expr::toR).joinToString(separator = " * ")+")"
