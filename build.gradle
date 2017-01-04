@@ -55,7 +55,7 @@ dependencies {
     compile 'com.github.sybila:ode-generator:1.0.4'
     compile 'com.github.sybila:ctl-model-checker:2.0.0'
     compile 'com.github.daemontus:jafra:1.0.8'
-    compile 'com.github.sybila:ctl-parser:2.2.1'
+    compile 'com.github.sybila:ctl-parser:2.2.2'
     compile files('libs/mpj.jar')
     compile files('libs/com.microsoft.z3.jar')
 }
