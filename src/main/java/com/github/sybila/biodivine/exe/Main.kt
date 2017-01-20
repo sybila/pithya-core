@@ -14,48 +14,27 @@ import com.github.sybila.ode.generator.rect.Rectangle
 import com.github.sybila.ode.generator.rect.RectangleOdeModel
 import com.github.sybila.ode.generator.smt.Z3OdeFragment
 import com.github.sybila.ode.generator.smt.Z3Params
-import com.github.sybila.ode.model.Evaluable
 import com.github.sybila.ode.model.OdeModel
 import com.github.sybila.ode.model.Parser
-import com.github.sybila.ode.model.RampApproximation
 import com.google.gson.Gson
-import com.google.gson.GsonBuilder
-import com.google.gson.InstanceCreator
 import com.google.gson.annotations.SerializedName
 import com.microsoft.z3.Expr
 import java.io.File
-import java.lang.management.ManagementFactory
 import java.util.*
 
-fun main(args: Array<String>) {
-    try {
-        if (args.isEmpty()) throw IllegalArgumentException("Missing argument: .json config file")
-        val cores = if (args.size > 1) args[1].toInt() else 1
-        val pid = ManagementFactory.getRuntimeMXBean().name.takeWhile { it != '@' }
-        System.err.println("PID: $pid")
-        System.err.flush()
-        val file = File(args[0]).readText()
-        val builder = GsonBuilder()
+fun main(shinyArgs: Array<String>) {
+    startShiny(shinyArgs) { args ->
+        val modelFile = File(args[0])
+        val propertyFile = File(args[1])
+        val cores = if (args.size > 2) args[2].toInt() else 1
 
-        builder.registerTypeAdapter(Evaluable::class.java, InstanceCreator<Evaluable> {
-            RampApproximation(0, doubleArrayOf(), doubleArrayOf())  //no other evaluables are supported
-        })
-
-        val parser = HUCTLParser()
-        val modelParser = Parser()
-        val gson = builder.create()
-        //val typeToken = object : TypeToken<Pair<Model, List<InputPair>>>() {}.type
-        val data: MainPair = gson.fromJson(file, MainPair::class.java)
-
-
-        val model = modelParser.parse(data.first)
-        val formulas = data.second.associateBy({it.first}, { parser.formula(it.second) })
+        val model = Parser().parse(modelFile)
+        val formulas = HUCTLParser().parse(propertyFile, onlyFlagged = true)
 
         //check missing thresholds
         val thresholdError = checkMissingThresholds(formulas.values.toList(), model)
         if (thresholdError != null) {
-            System.err.println(thresholdError)
-            return
+            throw IllegalStateException(thresholdError)
         }
 
         val isRectangular = model.variables.all {
@@ -83,10 +62,6 @@ fun main(args: Array<String>) {
         }
 
         System.err.println("!!DONE!!")
-
-    } catch (e: Exception) {
-        e.printStackTrace()
-        System.err.println("${e.message} (${e.javaClass.name})")
     }
 }
 

@@ -6,8 +6,8 @@ import com.github.sybila.ode.model.toBio
 import com.google.gson.Gson
 import java.io.File
 
-fun main(args: Array<String>) {
-    try {
+fun main(shinyArgs: Array<String>) {
+    startShiny(shinyArgs) { args ->
         if (args.isEmpty()) throw IllegalArgumentException("Missing argument: .bio file")
         if (args.size < 2) throw IllegalArgumentException("Missing argument: .ctl file")
         val propertyFile = File(args[1])
@@ -21,13 +21,10 @@ fun main(args: Array<String>) {
         //check missing thresholds
         val thresholdError = checkMissingThresholds(formulas.values.toList(), model)
         if (thresholdError != null) {
-            System.err.println(thresholdError)
-            return
+            throw IllegalStateException(thresholdError)
         }
 
         val json = Gson()
         println(json.toJson(model.toBio() to formulaString))
-    } catch (e: Exception) {
-        System.err.println("${e.message} (${e.javaClass.name})")
     }
 }
