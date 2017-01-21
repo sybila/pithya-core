@@ -20,7 +20,7 @@ about an OS-specific version.
 ## Run
 
 Pithya has one main binary **bin/pithya**. The bin folder also containes other executables,
-however, these are used only when pythia operates together with the GUI interface **TODO**, so you
+however, these are used only when pithya operates together with the GUI interface **TODO**, so you
 don't need to worry about them (short description of each is given at the end of this section).
 
 ### Arguments
