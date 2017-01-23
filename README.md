@@ -2,7 +2,7 @@
 [![Build Status](https://travis-ci.org/sybila/biodivine-ctl.svg?branch=master)](https://travis-ci.org/sybila/biodivine-ctl)
 [![License](https://img.shields.io/badge/License-GPL%20v3-blue.svg?style=flat)](https://github.com/sybila/biodivine-ctl/blob/master/LICENSE.txt)
 
-Pithya is a tool for parameter synthesis of ODE based models and properties based on a hybrid extension of CTL.
+Pithya is a tool for parameter synthesis of ODE-based models and properties based on a hybrid extension of CTL.
 
 ## Dependencies
 
@@ -13,13 +13,13 @@ location, so you don't necessarily need to have it in your PATH).
 
 ## Download Pithya
 
-You can download latest version of Pithya from our **TODO link**. 
+You can download the latest version of Pithya from our **TODO link**. 
 Pithya is written in Java so you don't have to worry 
 about an OS-specific version.
 
 ## Run
 
-Pithya has one main binary **bin/pithya**. The bin folder also containes other executables,
+Pithya has one main binary **bin/pithya**. The bin folder also contains other executables,
 however, these are used only when pithya operates together with the GUI interface **TODO**, so you
 don't need to worry about them (short description of each is given at the end of this section).
 
@@ -47,7 +47,7 @@ don't need to worry about them (short description of each is given at the end of
 #### Verification options
 
  - ```--parallelism integer``` *default: runtime.avaialableProcessors* The maximum number of threads that are used for parallel
- computation (this is an upper bound, for some specific models/properties, desired level of parallelism might not be achievable).
+ computation (this is an upper bound, for some specific models/properties, the desired level of parallelism might not be achievable).
  - ```--z3-path filePath``` *default: z3* Relative or absolute path to the z3 command line executable.
  - ```--transition-preprocessing [true, false]``` *default: true* To speed up on-the-fly transition generator, parts of the transition system
  are evaluated before the verification starts. This might not be desirable when the model is very large, but the property is expected to
@@ -60,15 +60,15 @@ don't need to worry about them (short description of each is given at the end of
 
 ### Other executables
 
-A part from the main binary, Pithya also contains these separate utilities:
- - ```tractor``` Takes a path to one .bio file as a command line argument, performs the linnear approximation and prints 
+Apart from the main binary, Pithya also contains these separate utilities:
+ - ```tractor``` Takes a path to one .bio file as a command line argument, performs the linear approximation and prints 
  resulting .bio model file to standard output. You can use ```tractor``` as a .bio syntax checker.
  - ```combine``` Takes a path to the (already approximated) .bio model and the .huctl property file as command line arguments
- and prints a configuration json file. You can use ```combine``` to verify that your model and propery files are valid.
+ and prints a configuration json file. You can use ```combine``` to verify that your model and property files are valid.
 
 ## Build from source
 
-You can naturaly build Pithya from source if you're so inclined. After you clone 
+You can naturally build Pithya from source if you're so inclined. After you clone 
 the repository, you can run one of these commands in the root folder:
 
 *TODO: find how to give args to run command*
