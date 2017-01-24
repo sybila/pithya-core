@@ -13,8 +13,6 @@ fun main(args: Array<String>) {
 
 fun startShiny(args: Array<String>, main: (Array<String>) -> Unit) {
     val port = args[0].toInt()
-    val file = File(args[1])
-    // The last modified setting might help with notifying R apps on windows...
     File(args[1]).bufferedWriter().use { notificationFile ->
         ServerSocket(port).use { killer ->
             Thread {
@@ -26,7 +24,6 @@ fun startShiny(args: Array<String>, main: (Array<String>) -> Unit) {
                                 if (it.any { it == "kill" }) {
                                     notificationFile.write("Killed\n")
                                     notificationFile.flush()
-                                    file.setLastModified(System.currentTimeMillis())
                                     exitProcess(0)
                                 }
                             }
@@ -44,13 +41,11 @@ fun startShiny(args: Array<String>, main: (Array<String>) -> Unit) {
                     main(args.toList().drop(2).toTypedArray())
                     notificationFile.write("Success\n")
                     notificationFile.flush()
-                    file.setLastModified(System.currentTimeMillis())
                 } catch (e: Exception) {
                     notificationFile.write("Error\n")
                     notificationFile.write(e.message ?: e.javaClass.canonicalName)
                     notificationFile.write("\n")
                     notificationFile.flush()
-                    file.setLastModified(System.currentTimeMillis())
                 }
             }
             app.start()
