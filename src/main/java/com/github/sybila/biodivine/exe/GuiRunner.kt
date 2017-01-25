@@ -5,9 +5,12 @@ import java.net.ServerSocket
 import java.net.SocketException
 import kotlin.system.exitProcess
 
+
 fun main(args: Array<String>) {
     startShiny(args) { args ->
-        println("Shiny app running")
+        val mainClass = Class.forName(args[0])
+        val mainMethod = mainClass.getMethod("main", Array<String>::class.java)
+        mainMethod.invoke(null, args.drop(1))
     }
 }
 

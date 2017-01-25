@@ -12,27 +12,109 @@ import com.github.sybila.huctl.fold
 import com.github.sybila.ode.generator.NodeEncoder
 import com.github.sybila.ode.generator.rect.Rectangle
 import com.github.sybila.ode.generator.rect.RectangleOdeModel
-import com.github.sybila.ode.generator.smt.Z3OdeFragment
-import com.github.sybila.ode.generator.smt.Z3Params
+import com.github.sybila.ode.generator.smt.local.Z3OdeFragment
+import com.github.sybila.ode.generator.smt.local.Z3Params
 import com.github.sybila.ode.model.OdeModel
 import com.github.sybila.ode.model.Parser
+import com.github.sybila.ode.model.computeApproximation
+import com.github.sybila.ode.model.toBio
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import com.microsoft.z3.Expr
+import org.kohsuke.args4j.CmdLineException
+import org.kohsuke.args4j.CmdLineParser
+import org.kohsuke.args4j.Option
 import java.io.File
+import java.io.InputStream
+import java.io.OutputStream
+import java.io.PrintStream
 import java.util.*
 
-fun main(shinyArgs: Array<String>) {
-    startShiny(shinyArgs) { args ->
-        val modelFile = File(args[0])
-        val propertyFile = File(args[1])
-        val cores = if (args.size > 2) args[2].toInt() else 1
+enum class ResultType { HUMAN, JSON }
+enum class LogLevel { NONE, INFO, VERBOSE, DEBUG }
 
-        val model = Parser().parse(modelFile)
-        val formulas = HUCTLParser().parse(propertyFile, onlyFlagged = true)
+internal fun String.readStream(): PrintStream? = when (this) {
+    "none" -> null
+    "stdout" -> System.out
+    "stderr" -> System.err
+    else -> PrintStream(File(this).apply { this.createNewFile() }.outputStream())
+}
+
+data class MainConfig(
+        @field:Option(
+                name = "-m", aliases = arrayOf("--model"),
+                usage = "Path to the .bio file from which the model should be loaded."
+        )
+        var model: File? = null,
+        @field:Option(
+                name = "-p", aliases = arrayOf("--property"),
+                usage = "Path to the .ctl file from which the properties should be loaded."
+        )
+        var property: File? = null,
+        @field:Option(
+                name = "-ro", aliases = arrayOf("--result-output"),
+                usage = "Name of stream to which the results should be printed. Filename, stdout, stderr or null."
+        )
+        var resultOutput: String = "stdout",
+        @field:Option(
+                name = "-r", aliases = arrayOf("--result"),
+                usage = "Type of result format. Accepted values: human, json."
+        )
+        var resultType: ResultType = ResultType.HUMAN,
+        @field:Option(
+                name = "-lo", aliases = arrayOf("--log-output"),
+                usage = "Name of stream to which logging info should be printed. Filename, stdout, stderr or null."
+        )
+        var logOutput: String = "stdout",
+        @field:Option(
+                name = "-l", aliases = arrayOf("--log"),
+                usage = "Log level: none, info, verbose, debug."
+        )
+        var logLevel: LogLevel = LogLevel.VERBOSE,
+        @field:Option(
+                name = "--parallelism",
+                usage = "Recommended number of used threads."
+        )
+        var parallelism: Int = Runtime.getRuntime().availableProcessors(),
+        @field:Option(
+                name = "--z3-path",
+                usage = "Path to z3 executable."
+        )
+        var z3Path: String = "z3",
+        @field:Option(
+                name = "--fast-approximation",
+                usage = "Use faster, but less precise version of linear approximation."
+        )
+        var fastApproximation: Boolean = false,
+        @field:Option(
+                name = "--cut-to-range",
+                usage = "Thresholds above and below original variable range will be discarded."
+        )
+        var cutToRange: Boolean = false,
+        @field:Option(
+                name = "--disable-self-loops",
+                usage = "Disable selfloop creation in transition system."
+        )
+        var disableSelfLoops: Boolean = false
+    )
+
+fun main(args: Array<String>) {
+    val config = MainConfig()
+    val parser = CmdLineParser(config)
+
+    try {
+        parser.parseArgument(*args)
+
+        val modelFile = config.model ?: throw IllegalArgumentException("Missing model file.")
+        val propFile = config.property ?: throw IllegalArgumentException("Missing property file.")
+
+        val model = Parser().parse(modelFile).computeApproximation(
+                fast = config.fastApproximation, cutToRange = config.cutToRange
+        )
+        val properties = HUCTLParser().parse(propFile, onlyFlagged = true)
 
         //check missing thresholds
-        val thresholdError = checkMissingThresholds(formulas.values.toList(), model)
+        val thresholdError = checkMissingThresholds(properties.values.toList(), model)
         if (thresholdError != null) {
             throw IllegalStateException(thresholdError)
         }
@@ -42,119 +124,38 @@ fun main(shinyArgs: Array<String>) {
         }
 
         if (isRectangular) {
-            val models = (0 until cores).map { RectangleOdeModel(model) }.asUniformPartitions()
-            Checker(models.connectWithSharedMemory()).use { checker ->
-                System.err.println("Verification started...")
-                val r = checker.verify(formulas)
-                System.err.println("Verification finished. Printing results...")
-                printRectResults(model, r)
-            }
+            rectangleMain(config, model, properties)
         } else {
-            val fragment = Z3OdeFragment(model)
-            SequentialChecker(fragment).use { checker ->
-                fragment.run {
-                    System.err.println("Verification started...")
-                    val r = checker.verify(formulas)
-                    System.err.println("Verification finished. Printing results...")
-                    printSMTResults(model, r)
-                }
-            }
+            z3Main(config, model, properties)
         }
+    } catch (e : CmdLineException) {
+        // if there's a problem in the command line,
+        // you'll get this exception. this will report
+        // an error message.
+        System.err.println(e.message);
+        System.err.println("pithyaApproximation [options...]");
+        // print the list of available options
+        parser.printUsage(System.err);
+        System.err.println();
 
-        System.err.println("!!DONE!!")
+        return;
     }
 }
 
-private fun printRectResults(model: OdeModel, result: Map<String, List<StateMap<Set<Rectangle>>>>) {
-    val states = ArrayList<Int>()
-    val params = ArrayList<Set<Rectangle>>()
-    val map = ArrayList<Result>()
-    for ((f, r) in result) {
-        val rMap = ArrayList<List<Int>>()
-        for (partitionResult in r) {
-            for ((s, p) in partitionResult.entries()) {
-                val ii = states.indexOf(s)
-                val i = if (ii < 0) {
-                    states.add(s)
-                    states.size - 1
-                } else ii
-                val jj = params.indexOf(p)
-                val j = if (jj < 0) {
-                    params.add(p)
-                    params.size - 1
-                } else jj
-                rMap.add(listOf(i, j))
-            }
-        }
-        map.add(Result(f, rMap))
-    }
-    val coder = NodeEncoder(model)
-    val r = ResultSet(
-            variables = model.variables.map { it.name },
-            parameters = model.parameters.map { it.name },
-            thresholds = model.variables.map { it.thresholds },
-            states = states.map { it.expand(model, coder) },
-            type = "rectangular",
-            results = map,
-            parameterValues = params.map {
-                it.map { it.asIntervals() }
-            },
-            parameterBounds = model.parameters.map { listOf(it.range.first, it.range.second) }
-    )
-    val gson = Gson()
-    println(gson.toJson(r))
-}
+internal fun Int.prettyPrint(model: OdeModel, encoder: NodeEncoder): String = "State($this)${
+model.variables.map { it.thresholds }.mapIndexed { dim, thresholds ->
+    val t = encoder.coordinate(this, dim)
+    "[${thresholds[t]}, ${thresholds[t+1]}]"
+}.joinToString()}"
 
-private fun Z3OdeFragment.printSMTResults(model: OdeModel, result: Map<String, StateMap<Z3Params>>) {
-    val states = ArrayList<Int>()
-    val params = ArrayList<Z3Params>()
-    val map = ArrayList<Result>()
-    for ((f, r) in result) {
-        val rMap = ArrayList<List<Int>>()
-        for ((s, p) in r.entries()) {
-            val ii = states.indexOf(s)
-            val i = if (ii < 0) {
-                states.add(s)
-                states.size - 1
-            } else ii
-            val jj = params.indexOf(p)
-            val j = if (jj < 0) {
-                p.minimize()
-                params.add(p)
-                params.size - 1
-            } else jj
-            rMap.add(listOf(i, j))
-        }
-        map.add(Result(f, rMap))
-    }
-    val coder = NodeEncoder(model)
-    val r = ResultSet(
-            variables = model.variables.map { it.name },
-            parameters = model.parameters.map { it.name },
-            thresholds = model.variables.map { it.thresholds },
-            states = states.map { it.expand(model, coder) },
-            type = "smt",
-            results = map,
-            parameterValues = params.map {
-                SMTResult(
-                        smtlib2Formula = it.formula.toString(),
-                        Rexpression = it.formula.toR()
-                )
-            },
-            parameterBounds = model.parameters.map { listOf(it.range.first, it.range.second) }
-    )
-    val printer = Gson()
-    println(printer.toJson(r))
-}
-
-private fun Int.expand(model: OdeModel, encoder:NodeEncoder): State {
+internal fun Int.expand(model: OdeModel, encoder:NodeEncoder): State {
     return State(id = this.toLong(), bounds = model.variables.mapIndexed { i, variable ->
         val c = encoder.coordinate(this, i)
         listOf(variable.thresholds[c], variable.thresholds[c+1])
     })
 }
 
-private class ResultSet(
+internal class ResultSet(
         val variables: List<String>,
         val parameters: List<String>,
         val thresholds: List<List<Double>>,
@@ -167,52 +168,15 @@ private class ResultSet(
         val results: List<Result>
 )
 
-private class Result(
+internal class Result(
         val formula: String,
         val data: List<List<Int>>
 )
 
-private class State(
+internal class State(
         val id: Long,
         val bounds: List<List<Double>>
 )
-
-private class SMTResult(
-        val smtlib2Formula: String,
-        val Rexpression: String
-)
-
-private class InputPair(
-        val first: String,  //name
-        val second: String  //formula
-)
-
-private class MainPair(
-        val first: String,
-        val second: List<InputPair>
-)
-
-private fun Expr.toR(): String {
-    return when {
-        //boolean
-        this.isAnd -> "(" + this.args.map(Expr::toR).joinToString(separator = " & ") + ")"
-        this.isOr -> "(" + this.args.map(Expr::toR).joinToString(separator = " | ") + ")"
-        this.isAdd -> "("+ this.args.map(Expr::toR).joinToString(separator = " + ")+")"
-        this.isSub -> "("+ this.args.map(Expr::toR).joinToString(separator = " - ")+")"
-        this.isMul -> "("+ this.args.map(Expr::toR).joinToString(separator = " * ")+")"
-        this.isDiv -> "("+ this.args.map(Expr::toR).joinToString(separator = " / ")+")"
-        this.isGT -> "(${this.args[0].toR()} > ${this.args[1].toR()})"
-        this.isGE -> "(${this.args[0].toR()} >= ${this.args[1].toR()})"
-        this.isLT -> "(${this.args[0].toR()} < ${this.args[1].toR()})"
-        this.isLE -> "(${this.args[0].toR()} <= ${this.args[1].toR()})"
-        this.isNot -> "(!${this.args[0].toR()})"
-        this.isTrue -> "TRUE"
-        this.isFalse -> "FALSE"
-        this.isConst -> "ip\$$this"
-        this.isInt || this.isReal -> this.toString()
-        else -> throw IllegalStateException("Unsupported formula: $this")
-    }
-}
 
 private fun Formula.invalidThresholds(model: OdeModel): Map<String, Set<Double>> {
     return this.fold<List<Pair<String, Double>>>({
