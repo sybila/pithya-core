@@ -31,7 +31,7 @@ fun z3Main(config: MainConfig, model: OdeModel, properties: Map<String, Formula>
         CheckerStats.reset(logStream)
     }
 
-    if (config.parallelism == 1) {
+    if (true) {
         val fragment = Z3OdeFragment(model, createSelfLoops = !config.disableSelfLoops)
 
         SequentialChecker(fragment).use { checker ->
