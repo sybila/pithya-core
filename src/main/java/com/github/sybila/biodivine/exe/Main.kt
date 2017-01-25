@@ -149,8 +149,8 @@ fun main(args: Array<String>) {
         // an error message.
         System.err.println(e.message)
         System.err.println("pithya [options...]")
-        // print the list of available options
-        parser.printUsage(System.err)
+        // print the list of available options (with fresh defaults)
+        CmdLineParser(MainConfig()).printUsage(System.err)
         System.err.println()
 
         return;

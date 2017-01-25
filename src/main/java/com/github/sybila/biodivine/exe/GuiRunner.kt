@@ -10,7 +10,7 @@ fun main(args: Array<String>) {
     startShiny(args) { args ->
         val mainClass = Class.forName(args[0])
         val mainMethod = mainClass.getMethod("main", Array<String>::class.java)
-        mainMethod.invoke(null, args.drop(1))
+        mainMethod.invoke(null, args.drop(1).toTypedArray())
     }
 }
 
