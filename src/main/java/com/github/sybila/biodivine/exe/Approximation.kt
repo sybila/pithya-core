@@ -21,6 +21,10 @@ data class ApproximationConfig(
 )
 
 fun main(args: Array<String>) {
+    runApprox(args)
+}
+
+fun runApprox(args: Array<String>) {
     val config = ApproximationConfig()
     val parser = CmdLineParser(config)
 

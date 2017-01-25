@@ -97,6 +97,10 @@ data class MainConfig(
     )
 
 fun main(args: Array<String>) {
+    runPithya(args)
+}
+
+fun runPithya(args: Array<String>) {
     val config = MainConfig()
     val parser = CmdLineParser(config)
 

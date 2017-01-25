@@ -53,11 +53,12 @@ fun z3Main(config: MainConfig, model: OdeModel, properties: Map<String, Formula>
             }
         }
     } else {
-        val models = (0 until config.parallelism).map {
+        val m = (0 until config.parallelism).map {
             com.github.sybila.ode.generator.smt.remote.Z3OdeFragment(
                     model, createSelfLoops = !config.disableSelfLoops
             )
-        }.asUniformPartitions()
+        }
+        val models = m.asUniformPartitions()
 
         Checker(models.connectWithSharedMemory()).use { checker ->
             val r = checker.verify(properties)
@@ -76,7 +77,9 @@ fun z3Main(config: MainConfig, model: OdeModel, properties: Map<String, Formula>
                     }
                 }
             } else {
-                resultStream?.println(printSMTResult(model, r))
+                m.first().run {
+                    resultStream?.println(printSMTResult(model, r))
+                }
             }
         }
     }
@@ -122,7 +125,7 @@ internal fun Expr.toR(): String {
 }
 
 
-private fun printZ3Results(model: OdeModel, result: Map<String, StateMap<Z3Params>>): String {
+private fun Z3OdeFragment.printZ3Results(model: OdeModel, result: Map<String, StateMap<Z3Params>>): String {
     val statesIndexMapping = HashMap<Int, Int>()
     val states = ArrayList<Int>()
     val paramsIndexMapping = HashMap<Z3Params, Int>()
@@ -152,6 +155,7 @@ private fun printZ3Results(model: OdeModel, result: Map<String, StateMap<Z3Param
             type = "smt",
             results = map,
             parameterValues = params.map {
+                it.minimize()
                 SMTResult(
                         smtlib2Formula = it.formula.toString(),
                         Rexpression = it.formula.toR()
@@ -163,7 +167,9 @@ private fun printZ3Results(model: OdeModel, result: Map<String, StateMap<Z3Param
     return printer.toJson(r)
 }
 
-private fun printSMTResult(model: OdeModel, result: Map<String, List<StateMap<com.github.sybila.ode.generator.smt.remote.Z3Params>>>): String {
+private fun com.github.sybila.ode.generator.smt.remote.Z3OdeFragment.printSMTResult(
+        model: OdeModel, result: Map<String, List<StateMap<com.github.sybila.ode.generator.smt.remote.Z3Params>>>
+): String {
     val statesIndexMapping = HashMap<Int, Int>()
     val states = ArrayList<Int>()
     val paramsIndexMapping = HashMap<com.github.sybila.ode.generator.smt.remote.Z3Params, Int>()
@@ -195,6 +201,7 @@ private fun printSMTResult(model: OdeModel, result: Map<String, List<StateMap<co
             type = "smt",
             results = map,
             parameterValues = params.map {
+                it.minimize(true)
                 SMTResult(
                         smtlib2Formula = it.formula,
                         Rexpression = it.formula.readSMT().toR(model)

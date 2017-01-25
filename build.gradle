@@ -112,14 +112,26 @@ applicationDistribution.into("bin") {
     fileMode = 0755
 }
 
-task combineScript(type: CreateStartScripts) {
-    mainClassName = "com.github.sybila.biodivine.exe.GuiRunnerKt"
-    applicationName = "pithyaGUIrunner"
+task guiAbstr(type: CreateStartScripts) {
+    mainClassName = "com.github.sybila.biodivine.exe.GUIApproximationKt"
+    applicationName = "pithyaGUIapprox"
     outputDir = new File(project.buildDir, 'scripts')
     classpath = jar.outputs.files + project.configurations.runtime
 }
 
 applicationDistribution.into("bin") {
-    from(combineScript)
+    from(guiAbstr)
+    fileMode = 0755
+}
+
+task guiMain(type: CreateStartScripts) {
+    mainClassName = "com.github.sybila.biodivine.exe.GUIMainKt"
+    applicationName = "pithyaGUImain"
+    outputDir = new File(project.buildDir, 'scripts')
+    classpath = jar.outputs.files + project.configurations.runtime
+}
+
+applicationDistribution.into("bin") {
+    from(guiMain)
     fileMode = 0755
 }
