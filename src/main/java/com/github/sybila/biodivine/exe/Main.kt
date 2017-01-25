@@ -126,6 +126,10 @@ fun main(args: Array<String>) {
         )
         val properties = HUCTLParser().parse(propFile, onlyFlagged = true)
 
+        if (properties.isEmpty()) {
+            throw IllegalStateException("No properties provided.")
+        }
+
         logStream?.println("Configuration loaded.")
 
         //check missing thresholds
