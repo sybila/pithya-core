@@ -19,9 +19,8 @@ import com.microsoft.z3.Expr
 import java.io.PrintStream
 import java.util.*
 
-fun z3Main(config: MainConfig, model: OdeModel, properties: Map<String, Formula>) {
+fun z3Main(config: MainConfig, model: OdeModel, properties: Map<String, Formula>, logStream: PrintStream?) {
 
-    val logStream: PrintStream? = config.logOutput.readStream()
     val resultStream: PrintStream? = config.resultOutput.readStream()
 
     if (config.logLevel >= LogLevel.INFO) {

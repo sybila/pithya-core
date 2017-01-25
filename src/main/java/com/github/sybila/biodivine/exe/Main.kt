@@ -1,40 +1,28 @@
 package com.github.sybila.biodivine.exe
 
-import com.github.sybila.checker.Checker
-import com.github.sybila.checker.SequentialChecker
-import com.github.sybila.checker.StateMap
-import com.github.sybila.checker.channel.connectWithSharedMemory
-import com.github.sybila.checker.partition.asUniformPartitions
 import com.github.sybila.huctl.Expression
 import com.github.sybila.huctl.Formula
 import com.github.sybila.huctl.HUCTLParser
 import com.github.sybila.huctl.fold
 import com.github.sybila.ode.generator.NodeEncoder
-import com.github.sybila.ode.generator.rect.Rectangle
-import com.github.sybila.ode.generator.rect.RectangleOdeModel
-import com.github.sybila.ode.generator.smt.local.Z3OdeFragment
-import com.github.sybila.ode.generator.smt.local.Z3Params
 import com.github.sybila.ode.model.OdeModel
 import com.github.sybila.ode.model.Parser
 import com.github.sybila.ode.model.computeApproximation
-import com.github.sybila.ode.model.toBio
-import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
-import com.microsoft.z3.Expr
 import org.kohsuke.args4j.CmdLineException
 import org.kohsuke.args4j.CmdLineParser
 import org.kohsuke.args4j.Option
 import java.io.File
-import java.io.InputStream
-import java.io.OutputStream
 import java.io.PrintStream
 import java.util.*
+
+val VERSION = "Pithya 1.0.0"
 
 enum class ResultType { HUMAN, JSON }
 enum class LogLevel { NONE, INFO, VERBOSE, DEBUG }
 
 internal fun String.readStream(): PrintStream? = when (this) {
-    "none" -> null
+    "null" -> null
     "stdout" -> System.out
     "stderr" -> System.err
     else -> PrintStream(File(this).apply { this.createNewFile() }.outputStream())
@@ -42,12 +30,22 @@ internal fun String.readStream(): PrintStream? = when (this) {
 
 data class MainConfig(
         @field:Option(
-                name = "-m", aliases = arrayOf("--model"),
+                name = "-v", aliases = arrayOf("--version"),
+                usage = "Print version of this executable and exit immediately"
+        )
+        var version: Boolean = false,
+        @field:Option(
+                name = "-h", aliases = arrayOf("--help"), help = true,
+                usage = "Print help message"
+        )
+        var help: Boolean = false,
+        @field:Option(
+                name = "-m", aliases = arrayOf("--model"), required = true,
                 usage = "Path to the .bio file from which the model should be loaded."
         )
         var model: File? = null,
         @field:Option(
-                name = "-p", aliases = arrayOf("--property"),
+                name = "-p", aliases = arrayOf("--property"), required = true,
                 usage = "Path to the .ctl file from which the properties should be loaded."
         )
         var property: File? = null,
@@ -68,7 +66,7 @@ data class MainConfig(
         var logOutput: String = "stdout",
         @field:Option(
                 name = "-l", aliases = arrayOf("--log"),
-                usage = "Log level: none, info, verbose, debug."
+                usage = "Log level."
         )
         var logLevel: LogLevel = LogLevel.VERBOSE,
         @field:Option(
@@ -105,6 +103,21 @@ fun main(args: Array<String>) {
     try {
         parser.parseArgument(*args)
 
+        if(config.version) {
+            println(VERSION)
+            return
+        }
+
+        if (config.help) {
+            parser.printUsage(System.err)
+            System.err.println()
+            return
+        }
+
+        val logStream: PrintStream? = config.logOutput.readStream()
+
+        logStream?.println("Loading model and properties...")
+
         val modelFile = config.model ?: throw IllegalArgumentException("Missing model file.")
         val propFile = config.property ?: throw IllegalArgumentException("Missing property file.")
 
@@ -112,6 +125,8 @@ fun main(args: Array<String>) {
                 fast = config.fastApproximation, cutToRange = config.cutToRange
         )
         val properties = HUCTLParser().parse(propFile, onlyFlagged = true)
+
+        logStream?.println("Configuration loaded.")
 
         //check missing thresholds
         val thresholdError = checkMissingThresholds(properties.values.toList(), model)
@@ -124,19 +139,19 @@ fun main(args: Array<String>) {
         }
 
         if (isRectangular) {
-            rectangleMain(config, model, properties)
+            rectangleMain(config, model, properties, logStream)
         } else {
-            z3Main(config, model, properties)
+            z3Main(config, model, properties, logStream)
         }
     } catch (e : CmdLineException) {
         // if there's a problem in the command line,
         // you'll get this exception. this will report
         // an error message.
-        System.err.println(e.message);
-        System.err.println("pithyaApproximation [options...]");
+        System.err.println(e.message)
+        System.err.println("pithya [options...]")
         // print the list of available options
-        parser.printUsage(System.err);
-        System.err.println();
+        parser.printUsage(System.err)
+        System.err.println()
 
         return;
     }
