@@ -10,6 +10,8 @@ installed. If your OS is supported, we strongly recommend downloading precompile
 Z3 binaries from github (Pithya allows you to specify a custom Z3 
 location, so you don't necessarily need to have it in your PATH, but we recommend doing that anyway).
 
+We strongly recommend to use Pithya with a GUI that is developed as a separate project and accessible at https://github.com/sybila/pithya-gui. 
+
 ## Download Pithya
 
 You can download the latest version of Pithya from the releases. 
