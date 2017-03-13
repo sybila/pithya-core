@@ -1,1 +1,1 @@
-:? reach_top = EF (x > 9 && y > 9)
+:? reach_top = EF (a > 9 && b > 9 && c > 9 && d > 9 && e > 9 && f > 9)
