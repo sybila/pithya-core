@@ -9,6 +9,7 @@ import com.github.sybila.huctl.Formula
 import com.github.sybila.ode.generator.bool.BoolOdeModel
 import com.github.sybila.ode.model.OdeModel
 import java.io.PrintStream
+import kotlin.concurrent.thread
 
 
 fun boolMain(config: MainConfig, model: OdeModel, properties: Map<String, Formula>, logStream: PrintStream?) {
@@ -26,6 +27,19 @@ fun boolMain(config: MainConfig, model: OdeModel, properties: Map<String, Formul
     val models = (0 until config.parallelism).map {
         BoolOdeModel(model, createSelfLoops = !config.disableSelfLoops)
     }.asUniformPartitions()
+
+    val start = System.currentTimeMillis()
+    models.map { thread {
+        it.run {
+            for (s in 0 until stateCount) {
+                if (s in this) {
+                    s.predecessors(true)
+                }
+            }
+        }
+    } }.forEach(Thread::join)
+    println("State space generation: ${System.currentTimeMillis() - start}")
+
     Checker(models.connectWithSharedMemory()).use { checker ->
 
         val r = checker.verify(properties)

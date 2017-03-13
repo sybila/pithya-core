@@ -148,10 +148,13 @@ fun runPithya(args: Array<String>) {
         val isBool = model.parameters.isEmpty()
 
         if (isBool) {
+            println("Run bool")
             boolMain(config, model, properties, logStream)
         } else if (isRectangular) {
+            println("Run rect")
             rectangleMain(config, model, properties, logStream)
         } else {
+            println("Run z3")
             z3Main(config, model, properties, logStream)
         }
     } catch (e : CmdLineException) {
