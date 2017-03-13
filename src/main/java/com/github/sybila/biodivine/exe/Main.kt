@@ -145,8 +145,11 @@ fun runPithya(args: Array<String>) {
         val isRectangular = model.variables.all {
             it.equation.map { it.paramIndex }.filter { it >= 0 }.toSet().size <= 1
         }
+        val isBool = model.parameters.isEmpty()
 
-        if (isRectangular) {
+        if (isBool) {
+            boolMain(config, model, properties, logStream)
+        } else if (isRectangular) {
             rectangleMain(config, model, properties, logStream)
         } else {
             z3Main(config, model, properties, logStream)
