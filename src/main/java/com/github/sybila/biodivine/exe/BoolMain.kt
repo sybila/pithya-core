@@ -28,7 +28,7 @@ fun boolMain(config: MainConfig, model: OdeModel, properties: Map<String, Formul
         BoolOdeModel(model, createSelfLoops = !config.disableSelfLoops)
     }.asUniformPartitions()
 
-    /*val start = System.currentTimeMillis()
+    val start = System.currentTimeMillis()
     models.map { thread {
         it.run {
             for (s in 0 until stateCount) {
@@ -38,7 +38,7 @@ fun boolMain(config: MainConfig, model: OdeModel, properties: Map<String, Formul
             }
         }
     } }.forEach(Thread::join)
-    println("State space generation: ${System.currentTimeMillis() - start}")*/
+    println("State space generation: ${System.currentTimeMillis() - start}")
 
     Checker(models.connectWithSharedMemory()).use { checker ->
 
@@ -48,7 +48,7 @@ fun boolMain(config: MainConfig, model: OdeModel, properties: Map<String, Formul
 
         for ((property, valid) in r) {
             val resultSize = valid.fold(0) { acc, map ->
-                acc + map.states().asSequence().count()
+                acc + map.entries().asSequence().filter { it.second }.count()
             }
             println("Property $property size: $resultSize")
         }

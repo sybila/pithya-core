@@ -1,0 +1,1 @@
+:? stable_low = AG (a < 2)
