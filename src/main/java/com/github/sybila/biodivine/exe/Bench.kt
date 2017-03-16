@@ -2,6 +2,7 @@ package com.github.sybila.biodivine.exe
 
 import com.github.sybila.checker.Checker
 import com.github.sybila.checker.channel.connectWithSharedMemory
+import com.github.sybila.checker.partition.asHashPartitions
 import com.github.sybila.checker.partition.asUniformPartitions
 import com.github.sybila.checker.solver.SolverStats
 import com.github.sybila.huctl.*
@@ -144,7 +145,7 @@ fun <P: Any, T: AbstractOdeFragment<P>> printModels(
         // repeat 5 times and take average
         val measuredTime = (1..5).map {
             measureTimeMillis {
-                val models = (0 until parallelism).map { constructor(model) }.asUniformPartitions()
+                val models = (0 until parallelism).map { constructor(model) }.asHashPartitions()
 
                 Checker(models.connectWithSharedMemory()).use { checker ->
                     checker.verify(property)
@@ -157,7 +158,7 @@ fun <P: Any, T: AbstractOdeFragment<P>> printModels(
 
         println("$stateCount in $measuredTime")
     } while (measuredTime < timeLimit)
-    
+
     states.zip(times).forEach {
         println("${it.first}\t${it.second}")
     }
