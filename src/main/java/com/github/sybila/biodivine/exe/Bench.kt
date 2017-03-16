@@ -146,7 +146,7 @@ fun <P: Any, T: AbstractOdeFragment<P>> printModels(
         // repeat 5 times and take average
         val measuredTime = (1..5).map {
             measureTimeMillis {
-                val models = (0 until parallelism).map { constructor(model) }.asBlockPartitions(256)
+                val models = (0 until parallelism).map { constructor(model) }.asBlockPartitions(Math.min(2*stateCount, 256))
 
                 Checker(models.connectWithSharedMemory()).use { checker ->
                     checker.verify(property)
