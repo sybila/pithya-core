@@ -3,6 +3,7 @@ package com.github.sybila.biodivine.exe
 import com.github.sybila.checker.Checker
 import com.github.sybila.checker.channel.connectWithSharedMemory
 import com.github.sybila.checker.partition.asUniformPartitions
+import com.github.sybila.checker.solver.SolverStats
 import com.github.sybila.huctl.*
 import com.github.sybila.ode.generator.AbstractOdeFragment
 import com.github.sybila.ode.generator.bool.BoolOdeModel
@@ -108,8 +109,7 @@ private fun Pair<Double, Double>.splitInto(stateCount: Int): List<Double> {
 fun main(args: Array<String>) {
     printModels(
             property = prop_2D_reach_mid,
-            timeLimit = 5000,
-            modelPrefix = "2D_1P_reach_mid/model_",
+            timeLimit = 60000,
             modelPrototype = model_2D_1P,
             parallelism = 1,
             constructor = { RectangleOdeModel(it) }
@@ -119,13 +119,14 @@ fun main(args: Array<String>) {
 fun <P: Any, T: AbstractOdeFragment<P>> printModels(
         property: Formula,
         timeLimit: Long,
-        modelPrefix: String,
         modelPrototype: OdeModel,
         parallelism: Int,
         constructor: (OdeModel) -> T
 ) {
     var varIndex = 0
     val stateCounts = modelPrototype.variables.map { 1 }.toMutableList()
+    val states = ArrayList<Int>()
+    val times = ArrayList<Long>()
     do {
         //increase state count
         stateCounts[varIndex] = (stateCounts[varIndex] * 1.1).toInt() + 1
@@ -140,9 +141,7 @@ fun <P: Any, T: AbstractOdeFragment<P>> printModels(
 
         val stateCount = stateCounts.fold(1) { a, b -> a * b }
 
-        File(modelPrefix+"$stateCount.bio").writeText(model.toBio())
-
-        // repeat 5 times and take fastest time
+        // repeat 5 times and take average
         val measuredTime = (1..5).map {
             measureTimeMillis {
                 val models = (0 until parallelism).map { constructor(model) }.asUniformPartitions()
@@ -150,9 +149,17 @@ fun <P: Any, T: AbstractOdeFragment<P>> printModels(
                 Checker(models.connectWithSharedMemory()).use { checker ->
                     checker.verify(property)
                 }
-            }.also { println("Measured $it") }
-        }.min() ?: 0L
+            }
+        }.sum() / 5
+
+        states.add(stateCount)
+        times.add(measuredTime)
 
         println("$stateCount in $measuredTime")
     } while (measuredTime < timeLimit)
+    
+    states.zip(times).forEach {
+        println("${it.first}\t${it.second}")
+    }
+
 }
