@@ -135,3 +135,8 @@ applicationDistribution.into("bin") {
     from(guiMain)
     fileMode = 0755
 }
+
+task runBench(type: JavaExec) {
+    classpath sourceSets.main.runtimeClasspath
+    main = "com.github.sybila.biodivine.exe.BenchKt"
+}

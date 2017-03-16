@@ -19,3 +19,5 @@ build
 
 ## Ignore experiments
 ex_*
+
+*.bio

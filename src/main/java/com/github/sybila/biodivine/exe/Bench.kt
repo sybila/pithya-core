@@ -6,6 +6,7 @@ import com.github.sybila.checker.partition.asUniformPartitions
 import com.github.sybila.huctl.*
 import com.github.sybila.ode.generator.AbstractOdeFragment
 import com.github.sybila.ode.generator.bool.BoolOdeModel
+import com.github.sybila.ode.generator.rect.RectangleOdeModel
 import com.github.sybila.ode.model.OdeModel
 import com.github.sybila.ode.model.Summand
 import com.github.sybila.ode.model.toBio
@@ -18,10 +19,23 @@ val prop_1D_mid = Formula.Bool.And(
         Formula.Atom.Float("v0".asVariable(), CompareOp.LE, 6.0.asConstant())
 )
 
+val prop_2D_mid = Formula.Bool.And(
+        Formula.Bool.And(
+                Formula.Atom.Float("v0".asVariable(), CompareOp.GE, 5.0.asConstant()),
+                Formula.Atom.Float("v0".asVariable(), CompareOp.LE, 6.0.asConstant())
+        ),
+        Formula.Bool.And(
+                Formula.Atom.Float("v1".asVariable(), CompareOp.GE, 5.0.asConstant()),
+                Formula.Atom.Float("v1".asVariable(), CompareOp.LE, 6.0.asConstant())
+        )
+)
+
 val prop_1D_stable_mid = AG(prop_1D_mid)
 val prop_1D_reach_mid = EF(prop_1D_mid)
-val prop_1D_nontrivial_cycle = bind("x", EX(EF("x".asReference())))
-val prop_1D_stable_state = bind("x", AX(AF("x".asReference())))
+val prop_2D_stable_mid = AG(prop_2D_mid)
+val prop_2D_reach_mid = EF(prop_2D_mid)
+val prop_nontrivial_cycle = bind("x", EX(EF("x".asReference())))
+val prop_stable_state = bind("x", AX(AF("x".asReference())))
 
 val extraThresholds = listOf(5.0, 6.0)
 
@@ -31,11 +45,26 @@ val model_1D_0P = OdeModel(
 
 val model_1D_1P = OdeModel(
         variables = listOf(modelVarOneParam(0, 0)),
-        parameters = listOf(OdeModel.Parameter(name = "p1", range = 0.0 to 10.0))
+        parameters = listOf(modelParam(0))
 )
 
 val model_2D_0P = OdeModel(
         variables = listOf(modelVarNoParam(0), modelVarNoParam(1))
+)
+
+val model_2D_1P = OdeModel(
+        variables = listOf(modelVarOneParam(0, 0), modelVarNoParam(1)),
+        parameters = listOf(modelParam(0))
+)
+
+val model_2D_2P = OdeModel(
+        variables = listOf(modelVarOneParam(0, 0), modelVarOneParam(1, 1)),
+        parameters = listOf(modelParam(0), modelParam(1))
+)
+
+private fun modelParam(index: Int) = OdeModel.Parameter(
+        name = "p$index",
+        range = 0.0 to 10.0
 )
 
 private fun modelVarNoParam(index: Int) = OdeModel.Variable(
@@ -78,12 +107,12 @@ private fun Pair<Double, Double>.splitInto(stateCount: Int): List<Double> {
 
 fun main(args: Array<String>) {
     printModels(
-            property = prop_1D_stable_mid,
+            property = prop_2D_reach_mid,
             timeLimit = 5000,
-            modelPrefix = "2D_0P_",
-            modelPrototype = model_2D_0P,
+            modelPrefix = "2D_1P_reach_mid/model_",
+            modelPrototype = model_2D_1P,
             parallelism = 1,
-            constructor = { BoolOdeModel(it) }
+            constructor = { RectangleOdeModel(it) }
     )
 }
 
