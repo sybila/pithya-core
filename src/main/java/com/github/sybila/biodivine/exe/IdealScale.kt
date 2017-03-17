@@ -1,8 +1,6 @@
 package com.github.sybila.biodivine.exe
 
 import com.github.sybila.checker.solver.SolverStats
-import com.github.sybila.ode.generator.rect.RectangleSolver
-import com.github.sybila.ode.generator.rect.rectangleOf
 import kotlin.concurrent.thread
 
 
@@ -12,10 +10,15 @@ fun main(args: Array<String>) {
         thread {
             val limit = 20000
             var counter = 0L
+            var iterations = 0L
             val start = System.currentTimeMillis()
             while (System.currentTimeMillis() < start + limit) {
+                iterations += 1
                 repeat(100) {
-                    val k = LongArray(4) { counter.also { counter += 1 } }
+                    val k = LongArray(4)
+                    for (i in k.indices) {
+                        k[i] = counter.also { counter += 1 }
+                    }
                     counter += k.sum()
                 }
             }
@@ -26,7 +29,7 @@ fun main(args: Array<String>) {
                     (tt and (a or b).not()).isSat()
                 }
             }*/
-            println("Done in ${System.currentTimeMillis() - start} and counter ${counter}")
+            println("Done in ${System.currentTimeMillis() - start} and counter ${iterations}")
         }
     }
 }
