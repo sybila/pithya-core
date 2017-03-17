@@ -140,3 +140,9 @@ task runBench(type: JavaExec) {
     classpath sourceSets.main.runtimeClasspath
     main = "com.github.sybila.biodivine.exe.BenchKt"
 }
+
+task runIdealScale(type: JavaExec) {
+    classpath sourceSets.main.runtimeClasspath
+    main = "com.github.sybila.biodivine.exe.IdealScaleKt"
+    args = ["4"]
+}
