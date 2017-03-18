@@ -1,1 +1,0 @@
-:? stable_state = bind x : EX EF x

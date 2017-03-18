@@ -139,6 +139,8 @@ applicationDistribution.into("bin") {
 task runBench(type: JavaExec) {
     classpath sourceSets.main.runtimeClasspath
     main = "com.github.sybila.biodivine.exe.BenchKt"
+    args = ["models/2D_some_mid.ctl", "60000", "models/2D_2P.bio", "1"]
+    jvmArgs = ["-Xmx8g"]
 }
 
 task runIdealScale(type: JavaExec) {

@@ -11,6 +11,7 @@ import com.github.sybila.ode.generator.AbstractOdeFragment
 import com.github.sybila.ode.generator.bool.BoolOdeModel
 import com.github.sybila.ode.generator.rect.RectangleOdeModel
 import com.github.sybila.ode.model.OdeModel
+import com.github.sybila.ode.model.Parser
 import com.github.sybila.ode.model.Summand
 import com.github.sybila.ode.model.toBio
 import java.io.File
@@ -109,11 +110,12 @@ private fun Pair<Double, Double>.splitInto(stateCount: Int): List<Double> {
 }
 
 fun main(args: Array<String>) {
+    println(Runtime.getRuntime().maxMemory())
     printModels(
-            property = prop_2D_reach_mid,
-            timeLimit = 60000,
-            modelPrototype = model_2D_1P,
-            parallelism = 1,
+            property = HUCTLParser().formula(File(args[0]).readText()),
+            timeLimit = args[1].toLong(),
+            modelPrototype = Parser().parse(File(args[2])),
+            parallelism = args[3].toInt(),
             constructor = { RectangleOdeModel(it) }
     )
 }
@@ -131,12 +133,12 @@ fun <P: Any, T: AbstractOdeFragment<P>> printModels(
     val times = ArrayList<Long>()
     do {
         //increase state count
-        stateCounts[varIndex] = (stateCounts[varIndex] * 1.1).toInt() + 1
+        stateCounts[varIndex] = (stateCounts[varIndex] * 1.2).toInt() + 1
         varIndex = (varIndex + 1) % stateCounts.size
         val model = modelPrototype.copy(
                 variables = modelPrototype.variables.zip(stateCounts).map { (variable, count) ->
                     variable.copy(
-                            thresholds = (variable.range.splitInto(count) + extraThresholds).toSet().toList().sorted()
+                            thresholds = (variable.range.splitInto(count) + variable.thresholds).toSet().toList().sorted()
                     )
                 }
         )
