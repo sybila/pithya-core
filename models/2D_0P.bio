@@ -1,0 +1,9 @@
+VARS: v0, v1
+
+CONSTS: p0,5; p1,5
+
+EQ: v0 = v0 - p0
+EQ: v1 = v1 - p1
+
+THRES: v0: 0, 4.5, 5.5, 10
+THRES: v1: 0, 4.5, 5.5, 10
