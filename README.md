@@ -3,6 +3,10 @@
 
 Pithya is a tool for parameter synthesis of ODE-based models and properties based on a hybrid extension of CTL.
 
+## Online demo
+
+To try Pithya online, visit [pithya.ics.muni.cz](http://pithya.ics.muni.cz). In case of any problems/questions, feel free to contact us at [sybila@fi.muni.cz](mailto:sybila@fi.muni.cz).
+
 ## Dependencies
 
 To run Pithya, you need to have **Java 8+** and Microsoft **Z3 4.5.0** 
