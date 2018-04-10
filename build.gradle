@@ -49,6 +49,7 @@ dependencies {
     compile 'com.github.sybila:ctl-parser:2.2.3'
     compile 'args4j:args4j:2.33'
     compile files('libs/com.microsoft.z3.jar')
+    compile 'com.github.sybila:terminal-components:v0.4.1'
 }
 
 //Specify main class
@@ -133,5 +134,17 @@ task guiMain(type: CreateStartScripts) {
 
 applicationDistribution.into("bin") {
     from(guiMain)
+    fileMode = 0755
+}
+
+task guiComponents(type: CreateStartScripts) {
+    mainClassName = "com.github.sybila.biodivine.exe.GUIComponentsKt"
+    applicationName = "pithyaGUIcomponents"
+    outputDir = new File(project.buildDir, 'scripts')
+    classpath = jar.outputs.files + project.configurations.runtime
+}
+
+applicationDistribution.into("bin") {
+    from(guiComponents)
     fileMode = 0755
 }
