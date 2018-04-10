@@ -1,5 +1,5 @@
 buildscript {
-    ext.kotlin_version = '1.0.6'
+    ext.kotlin_version = '1.2.31'
 
     repositories {
         jcenter()
@@ -146,5 +146,17 @@ task guiComponents(type: CreateStartScripts) {
 
 applicationDistribution.into("bin") {
     from(guiComponents)
+    fileMode = 0755
+}
+
+task dumpStates(type: CreateStartScripts) {
+    mainClassName = "com.github.sybila.biodivine.exe.DumpStatesKt"
+    applicationName = "pithyaDumpStates"
+    outputDir = new File(project.buildDir, 'scripts')
+    classpath = jar.outputs.files + project.configurations.runtime
+}
+
+applicationDistribution.into("bin") {
+    from(dumpStates)
     fileMode = 0755
 }
