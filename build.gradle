@@ -157,7 +157,7 @@ task components(type: CreateStartScripts) {
 }
 
 applicationDistribution.into("bin") {
-    from(guiComponents)
+    from(components)
     fileMode = 0755
 }
 
