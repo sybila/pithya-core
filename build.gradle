@@ -149,7 +149,7 @@ applicationDistribution.into("bin") {
     fileMode = 0755
 }
 
-task components(type: CreateStartScripts) {
+task componentsMain(type: CreateStartScripts) {
     mainClassName = "com.github.sybila.biodivine.exe.ComponentsKt"
     applicationName = "pithyaComponents"
     outputDir = new File(project.buildDir, 'scripts')
@@ -157,7 +157,7 @@ task components(type: CreateStartScripts) {
 }
 
 applicationDistribution.into("bin") {
-    from(components)
+    from(componentsMain)
     fileMode = 0755
 }
 
