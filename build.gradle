@@ -22,7 +22,7 @@ apply plugin: 'application'
 
 group = "com.github.sybila"
 archivesBaseName = "pithya"
-version = '1.3.0'
+version = '1.3.1'
 
 repositories {
     mavenCentral()
@@ -49,7 +49,7 @@ dependencies {
     compile 'com.github.sybila:ctl-parser:2.2.3'
     compile 'args4j:args4j:2.33'
     compile files('libs/com.microsoft.z3.jar')
-    compile 'com.github.sybila:terminal-components:v0.4.1'
+    compile 'com.github.sybila:terminal-components:0.6.1'
 }
 
 //Specify main class
@@ -140,6 +140,18 @@ applicationDistribution.into("bin") {
 task guiComponents(type: CreateStartScripts) {
     mainClassName = "com.github.sybila.biodivine.exe.GUIComponentsKt"
     applicationName = "pithyaGUIcomponents"
+    outputDir = new File(project.buildDir, 'scripts')
+    classpath = jar.outputs.files + project.configurations.runtime
+}
+
+applicationDistribution.into("bin") {
+    from(guiComponents)
+    fileMode = 0755
+}
+
+task components(type: CreateStartScripts) {
+    mainClassName = "com.github.sybila.biodivine.exe.ComponentsKt"
+    applicationName = "pithyaComponents"
     outputDir = new File(project.buildDir, 'scripts')
     classpath = jar.outputs.files + project.configurations.runtime
 }
