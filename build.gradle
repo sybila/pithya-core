@@ -44,7 +44,7 @@ dependencies {
     //ODE and CTL modules do not propagate this dependency, because it's part of the plugin
     compile 'org.antlr:antlr4-runtime:4.6'
     //BioDivine modules. We list all, since that will override possible old version in transitive dependencies
-    compile 'com.github.sybila:ode-generator:1.2.0'
+    compile 'com.github.sybila:ode-generator:1.2.1'
     compile 'com.github.sybila:ctl-model-checker:2.1.2'
     compile 'com.github.sybila:ctl-parser:2.2.3'
     compile 'args4j:args4j:2.33'
