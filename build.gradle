@@ -22,7 +22,7 @@ apply plugin: 'application'
 
 group = "com.github.sybila"
 archivesBaseName = "pithya"
-version = '1.3.1'
+version = '1.3.2'
 
 repositories {
     mavenCentral()
