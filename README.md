@@ -28,6 +28,8 @@ don't need to worry about them.
 
 ### Arguments
 
+This is desription of arguments for parameter synthesis. Arguments for component analysis are described in the corresponding [repo](https://github.com/sybila/terminal-components).
+
 #### Input and output
 
  - ```[-m,--model] filePath``` *required* Path to the .bio file from which the model should be loaded. Detailed
@@ -83,12 +85,16 @@ Pithya is composed of several independent modules. Here you can find links to th
 [![codecov.io](https://codecov.io/github/sybila/ctl-model-checker/coverage.svg?branch=master)](https://codecov.io/github/sybila/ctl-model-checker?branch=master)
 [CTL Model Checker](https://github.com/sybila/ctl-model-checker)
 
-[![Release](https://jitpack.io/v/sybila/ctl-parser.svg)](https://jitpack.io/#sybila/ctl-parser)
-[![Build Status](https://travis-ci.org/sybila/ctl-parser.svg?branch=master)](https://travis-ci.org/sybila/ctl-parser)
-[![codecov.io](https://codecov.io/github/sybila/ctl-parser/coverage.svg?branch=master)](https://codecov.io/github/sybila/ctl-parser?branch=master)
-[CTL Query Parser](https://github.com/sybila/ctl-parser)
+[![Release](https://jitpack.io/v/sybila/huctl.svg)](https://jitpack.io/#sybila/huctl)
+[![Build Status](https://travis-ci.org/sybila/huctl.svg?branch=master)](https://travis-ci.org/sybila/huctl)
+[![codecov.io](https://codecov.io/github/sybila/huctl/coverage.svg?branch=master)](https://codecov.io/github/sybila/huctl?branch=master)
+[HUCTL Query Parser](https://github.com/sybila/huctl)
 
 [![Release](https://jitpack.io/v/sybila/ode-generator.svg)](https://jitpack.io/#sybila/ode-generator)
 [![Build Status](https://travis-ci.org/sybila/ode-generator.svg?branch=master)](https://travis-ci.org/sybila/ode-generator)
 [![codecov.io](https://codecov.io/github/sybila/ode-generator/coverage.svg?branch=master)](https://codecov.io/github/sybila/ode-generator?branch=master)
 [ODE State Space Generator](https://github.com/sybila/ode-generator)
+
+[![Release](https://jitpack.io/v/sybila/terminal-components.svg)](https://jitpack.io/#sybila/terminal-components)
+[![Build Status](https://travis-ci.org/sybila/terminal-components.svg?branch=master)](https://travis-ci.org/sybila/terminal-components)
+[Terminal Components Analysis](https://github.com/sybila/terminal-components)
