@@ -5,7 +5,7 @@ Pithya is a tool for parameter synthesis of ODE-based models and properties base
 
 ## Online demo
 
-To try Pithya online, visit [pithya.ics.muni.cz](http://pithya.ics.muni.cz). In case of any problems/questions, feel free to contact us at [sybila@fi.muni.cz](mailto:sybila@fi.muni.cz).
+To try Pithya online, visit [pithya.fi.muni.cz](https://pithya.fi.muni.cz/). In case of any problems/questions, feel free to contact us at [sybila@fi.muni.cz](mailto:sybila@fi.muni.cz).
 
 ## Dependencies
 
