@@ -1,5 +1,6 @@
 [![Build Status](https://travis-ci.org/sybila/pithya-core.svg?branch=master)](https://travis-ci.org/sybila/pithya-core)
 [![License](https://img.shields.io/badge/License-GPL%20v3-blue.svg?style=flat)](https://github.com/sybila/biodivine-ctl/blob/master/LICENSE.txt)
+[![Docker Pulls](https://badgen.net//docker/pulls/sybila/pithya?icon=docker)](https://hub.docker.com/r/sybila/pithya/)
 
 Pithya is a tool for parameter synthesis of ODE-based models and properties based on a hybrid extension of CTL.
 
